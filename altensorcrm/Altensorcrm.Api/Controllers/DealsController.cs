@@ -51,9 +51,22 @@ public class DealsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/stage")]
-    public async Task<IActionResult> UpdateStage(Guid id, [FromQuery] DealStatus newStatus, [FromQuery] string? lostReason, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateStage(Guid id, [FromQuery] string newStatus, [FromQuery] string? lostReason, CancellationToken cancellationToken)
     {
-        var result = await _dealService.UpdateStageAsync(id, newStatus, lostReason, cancellationToken);
+        DealStatus parsedStatus = DealStatus.Qualification;
+        if (!string.IsNullOrWhiteSpace(newStatus))
+        {
+            var cleaned = newStatus.Replace("/", "").Replace(" ", "").Replace("_", "").ToLower();
+            if (cleaned.Contains("demo")) parsedStatus = DealStatus.Demo;
+            else if (cleaned.Contains("proposal") || cleaned.Contains("quote")) parsedStatus = DealStatus.Proposal;
+            else if (cleaned.Contains("negotiat")) parsedStatus = DealStatus.Negotiation;
+            else if (cleaned.Contains("ready") || cleaned.Contains("close")) parsedStatus = DealStatus.ReadyToClose;
+            else if (cleaned.Contains("won")) parsedStatus = DealStatus.Won;
+            else if (cleaned.Contains("lost")) parsedStatus = DealStatus.Lost;
+            else if (Enum.TryParse<DealStatus>(newStatus, true, out var resultEnum)) parsedStatus = resultEnum;
+        }
+
+        var result = await _dealService.UpdateStageAsync(id, parsedStatus, lostReason, cancellationToken);
         return Ok(result);
     }
 

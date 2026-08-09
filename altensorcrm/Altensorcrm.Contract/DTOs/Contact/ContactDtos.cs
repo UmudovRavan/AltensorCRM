@@ -4,34 +4,34 @@ using Altensorcrm.Domain.Enums;
 namespace Altensorcrm.Contract.DTOs.Contact;
 
 public record CreateContactDto(
-    Salutation? Salutation,
-    string FirstName,
-    string LastName,
-    string EmailAddress,
-    string MobileNo,
-    Gender? Gender,
-    string? CompanyName,
-    string? Designation,
-    Guid? AddressId,
-    CreateAddressDto? Address,
-    Guid? OrganizationId,
-    Guid? AssignedUserId
+    Salutation? Salutation = null,
+    string? FirstName = null,
+    string? LastName = null,
+    string? EmailAddress = null,
+    string? MobileNo = null,
+    Gender? Gender = null,
+    string? CompanyName = null,
+    string? Designation = null,
+    Guid? AddressId = null,
+    CreateAddressDto? Address = null,
+    Guid? OrganizationId = null,
+    Guid? AssignedUserId = null
 );
 
 public record UpdateContactDto(
     Guid Id,
-    Salutation? Salutation,
-    string FirstName,
-    string LastName,
-    string EmailAddress,
-    string MobileNo,
-    Gender? Gender,
-    string? CompanyName,
-    string? Designation,
-    Guid? AddressId,
-    CreateAddressDto? Address,
-    Guid? OrganizationId,
-    Guid? AssignedUserId
+    Salutation? Salutation = null,
+    string? FirstName = null,
+    string? LastName = null,
+    string? EmailAddress = null,
+    string? MobileNo = null,
+    Gender? Gender = null,
+    string? CompanyName = null,
+    string? Designation = null,
+    Guid? AddressId = null,
+    CreateAddressDto? Address = null,
+    Guid? OrganizationId = null,
+    Guid? AssignedUserId = null
 );
 
 public record ContactDetailDto

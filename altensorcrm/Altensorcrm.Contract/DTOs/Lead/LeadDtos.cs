@@ -40,6 +40,7 @@ public record UpdateLeadDto(
     Guid? LeadOwnerId
 );
 
+
 public record LeadDetailDto
 {
     public Guid Id { get; init; }

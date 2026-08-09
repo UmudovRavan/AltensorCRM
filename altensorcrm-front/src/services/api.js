@@ -84,7 +84,7 @@ export const leadsApi = {
   create: (data) => request('/Leads', 'POST', data),
   update: (id, data) => request(`/Leads/${id}`, 'PUT', data),
   delete: (id) => request(`/Leads/${id}`, 'DELETE'),
-  convertToDeal: (id) => request(`/Leads/${id}/convert-to-deal`, 'POST')
+  convertToDeal: (id, payload = { dealAmount: 0, assignedUserId: null }) => request(`/Leads/${id}/convert-to-deal`, 'POST', payload)
 };
 
 export const dealsApi = {
@@ -92,7 +92,7 @@ export const dealsApi = {
   getById: (id) => request(`/Deals/${id}`),
   create: (data) => request('/Deals', 'POST', data),
   update: (id, data) => request(`/Deals/${id}`, 'PUT', data),
-  updateStage: (id, stage) => request(`/Deals/${id}/stage`, 'PATCH', { stage }),
+  updateStage: (id, stage, lostReason = '') => request(`/Deals/${id}/stage?newStatus=${stage}${lostReason ? `&lostReason=${encodeURIComponent(lostReason)}` : ''}`, 'PATCH'),
   delete: (id) => request(`/Deals/${id}`, 'DELETE')
 };
 

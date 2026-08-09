@@ -665,7 +665,7 @@
             "name": "newStatus",
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/DealStatus"
+              "type": "string"
             }
           },
           {
@@ -1585,7 +1585,8 @@
           },
           "assignedUserId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -1899,7 +1900,8 @@
           },
           "createdById": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "nullable": true
           },
           "leadId": {
             "type": "string",
@@ -2037,7 +2039,11 @@
         "enum": [
           "Male",
           "Female",
-          "Other"
+          "Other",
+          "Genderqueer",
+          "NonConforming",
+          "PreferNotToSay",
+          "Transgender"
         ],
         "type": "string"
       },
@@ -2071,9 +2077,13 @@
       "LeadStatus": {
         "enum": [
           "New",
-          "Connected",
+          "Contacted",
           "Nurture",
+          "Qualified",
+          "Converted",
           "ConvertToDeal",
+          "Unqualified",
+          "Junk",
           "Failed"
         ],
         "type": "string"
@@ -2136,7 +2146,10 @@
           "Mrs",
           "Ms",
           "Dr",
-          "Prof"
+          "Prof",
+          "Madam",
+          "Master",
+          "Miss"
         ],
         "type": "string"
       },

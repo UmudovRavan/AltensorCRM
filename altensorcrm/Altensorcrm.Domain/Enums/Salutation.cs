@@ -6,5 +6,8 @@ public enum Salutation
     Mrs,
     Ms,
     Dr,
-    Prof
+    Prof,
+    Madam,
+    Master,
+    Miss
 }

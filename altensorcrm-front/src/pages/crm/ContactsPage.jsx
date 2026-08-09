@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { contactsApi } from '../../services/api';
 import {
   PlusIcon,
@@ -109,148 +110,7 @@ const filterFields = [
   'Last Modified'
 ];
 
-const initialContacts = [
-  {
-    id: '1',
-    email: 'ramiz@gmail.com',
-    phone: '456477474',
-    organization: 'estetik dis',
-    orgInitial: 'E',
-    status: 'Open',
-    lastModified: '2 days ago',
-    fullDate: 'Sat, Aug 6, 2026 02:15 pm'
-  },
-  {
-    id: '2',
-    email: 'alicabbarov@gmail.com',
-    phone: '047474774',
-    organization: 'Ali mmc',
-    orgInitial: 'A',
-    status: 'Open',
-    lastModified: '3 days ago',
-    fullDate: 'Mon, Aug 3, 2026 10:19 am'
-  },
-  {
-    id: '3',
-    email: 'bextiyar@gmail.com',
-    phone: '0774563424',
-    organization: 'xalq bank',
-    orgInitial: 'X',
-    status: 'Replied',
-    lastModified: '5 days ago',
-    fullDate: 'Wed, Jul 29, 2026 11:30 am'
-  },
-  {
-    id: '4',
-    email: 'elvinmuzaffarli@gmail.com',
-    phone: '',
-    organization: '',
-    orgInitial: '',
-    status: 'Open',
-    lastModified: '1 week ago',
-    fullDate: 'Sun, Jul 26, 2026 04:20 pm'
-  },
-  {
-    id: '5',
-    email: 'orkhan@bmgl.az',
-    phone: '',
-    organization: '',
-    orgInitial: '',
-    status: 'Passive',
-    lastModified: '1 week ago',
-    fullDate: 'Sun, Jul 26, 2026 04:10 pm'
-  },
-  {
-    id: '6',
-    email: 'fidan@bmgi.az',
-    phone: '',
-    organization: '',
-    orgInitial: '',
-    status: 'Passive',
-    lastModified: '1 week ago',
-    fullDate: 'Sun, Jul 26, 2026 04:05 pm'
-  },
-  {
-    id: '7',
-    email: 'info@bmgi.az',
-    phone: '',
-    organization: '',
-    orgInitial: '',
-    status: 'Passive',
-    lastModified: '1 week ago',
-    fullDate: 'Sun, Jul 26, 2026 04:00 pm'
-  },
-  {
-    id: '8',
-    email: 'kamranrehimli@gmail.com',
-    phone: '0557456565',
-    organization: 'bmg international',
-    orgInitial: 'B',
-    status: 'Replied',
-    lastModified: '1 week ago',
-    fullDate: 'Sun, Jul 26, 2026 03:45 pm'
-  },
-  {
-    id: '9',
-    email: 'elvinmuzaffarlidta@gmail.com',
-    phone: '+994773890412',
-    organization: 'ALTENSOR',
-    orgInitial: 'A',
-    status: 'Open',
-    lastModified: '3 weeks ago',
-    fullDate: 'Sat, Jul 18, 2026 09:12 am'
-  },
-  {
-    id: '10',
-    email: 'said@apply-uni.com',
-    phone: '',
-    organization: '',
-    orgInitial: '',
-    status: 'Passive',
-    lastModified: '3 weeks ago',
-    fullDate: 'Fri, Jul 17, 2026 05:30 pm'
-  },
-  {
-    id: '11',
-    email: 'john@example.com',
-    phone: '',
-    organization: '',
-    orgInitial: '',
-    status: 'Passive',
-    lastModified: '3 weeks ago',
-    fullDate: 'Thu, Jul 16, 2026 01:20 pm'
-  },
-  {
-    id: '12',
-    email: 'vusal@pashabank.az',
-    phone: '+994501234567',
-    organization: 'Pasha Bank',
-    orgInitial: 'P',
-    status: 'Replied',
-    lastModified: '3 weeks ago',
-    fullDate: 'Wed, Jul 15, 2026 10:00 am'
-  },
-  {
-    id: '13',
-    email: 'gunel@neftchi.az',
-    phone: '+994559876543',
-    organization: 'Neftchi IS',
-    orgInitial: 'N',
-    status: 'Open',
-    lastModified: '1 month ago',
-    fullDate: 'Wed, Jul 08, 2026 03:00 pm'
-  },
-  {
-    id: '14',
-    email: 'elnur@bakcell.az',
-    phone: '+994705554433',
-    organization: 'Bakcell',
-    orgInitial: 'B',
-    status: 'Open',
-    lastModified: '1 month ago',
-    fullDate: 'Mon, Jul 06, 2026 11:45 am'
-  }
-];
+const initialContacts = [];
 
 const ContactsPage = () => {
   const [contacts, setContacts] = useState(initialContacts);
@@ -413,34 +273,119 @@ const ContactsPage = () => {
     setIsFloatingActionsOpen(false);
   };
 
-  const handleDeleteSelected = () => {
-    setContacts(contacts.filter((c) => !selectedRows.includes(c.id)));
-    setSelectedRows([]);
-    setIsFloatingActionsOpen(false);
+  const handleDeleteSelected = async () => {
+    try {
+      await Promise.all(selectedRows.map((id) => contactsApi.delete(id)));
+      setContacts(contacts.filter((c) => !selectedRows.includes(c.id)));
+      setSelectedRows([]);
+      setIsFloatingActionsOpen(false);
+    } catch (err) {
+      console.error('Error deleting contacts:', err);
+    }
   };
 
   const toggleColumnVisibility = (key) => {
     setColumns(columns.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c)));
   };
 
-  const handleFullCreateContactSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchBackendContacts();
+  }, []);
+
+  const fetchBackendContacts = async () => {
+    try {
+      setLoading(true);
+      const data = await contactsApi.getAll();
+      if (data && (data.items || Array.isArray(data))) {
+        const list = data.items || data;
+        const mapped = list.map(c => {
+          const orgStr = c.organizationName || c.companyName || '';
+          const emailStr = c.emailAddress || c.email || 'user@example.com';
+          const mobileStr = c.mobileNo || c.phone || '';
+          return {
+            id: String(c.id || c.Id),
+            name: (c.fullName || `${c.salutation || ''} ${c.firstName || ''} ${c.lastName || ''}`).trim() || emailStr,
+            email: emailStr,
+            phone: mobileStr,
+            organization: orgStr,
+            orgInitial: orgStr ? orgStr.charAt(0).toUpperCase() : '',
+            status: c.status || 'Open',
+            lastModified: 'Just now',
+            fullDate: 'Just now'
+          };
+        });
+        setContacts(mapped);
+      }
+    } catch (err) {
+      console.warn('Backend API contacts fetch notice:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+const mapSalutationToEnum = (sal) => {
+  if (!sal || sal === 'Salutation') return null;
+  if (sal === 'Mr' || sal === 'Mrs' || sal === 'Ms' || sal === 'Dr' || sal === 'Prof' || sal === 'Madam' || sal === 'Master' || sal === 'Miss') return sal;
+  return null;
+};
+
+const mapGenderToEnum = (gen) => {
+  if (!gen || gen === 'Gender') return null;
+  if (gen === 'Male' || gen === 'Female' || gen === 'Other') return gen;
+  if (gen === 'Genderqueer') return 'Genderqueer';
+  if (gen.includes('Non')) return 'NonConforming';
+  if (gen.includes('Prefer')) return 'PreferNotToSay';
+  if (gen === 'Transgender') return 'Transgender';
+  return 'Other';
+};
+
+  const handleFullCreateContactSubmit = async (e) => {
     e.preventDefault();
-    let orgName = contactForm.organizationName;
-    if (chooseExistingOrg && contactForm.existingOrg !== 'Organization') orgName = contactForm.existingOrg;
+    let orgName = contactForm.organizationName ? contactForm.organizationName.trim() : '';
+    if (chooseExistingOrg && contactForm.existingOrg && contactForm.existingOrg !== 'Organization') {
+      orgName = contactForm.existingOrg;
+    }
 
     const contactObj = {
       id: String(Date.now()),
-      email: contactForm.primaryEmail || `${contactForm.firstName.toLowerCase() || 'new'}@example.com`,
-      phone: contactForm.primaryMobile || '',
-      organization: orgName || '',
+      email: contactForm.primaryEmail ? contactForm.primaryEmail.trim() : 'user@example.com',
+      phone: contactForm.primaryMobile ? contactForm.primaryMobile.trim() : '0551234567',
+      organization: orgName,
       orgInitial: orgName ? orgName.charAt(0).toUpperCase() : '',
-      status: contactForm.status,
+      status: contactForm.status || 'Open',
       lastModified: 'Just now',
       fullDate: 'Just now'
     };
 
-    setContacts([contactObj, ...contacts]);
+    setContacts((prev) => [contactObj, ...prev]);
     setIsCreateModalOpen(false);
+
+    try {
+      const payload = {
+        salutation: mapSalutationToEnum(contactForm.salutation),
+        firstName: contactForm.firstName ? contactForm.firstName.trim() : 'Contact',
+        lastName: contactForm.lastName ? contactForm.lastName.trim() : '',
+        emailAddress: contactForm.primaryEmail ? contactForm.primaryEmail.trim() : 'user@example.com',
+        mobileNo: contactForm.primaryMobile ? contactForm.primaryMobile.trim() : '0551234567',
+        gender: mapGenderToEnum(contactForm.gender),
+        companyName: orgName,
+        designation: '',
+        addressId: null,
+        address: null,
+        organizationId: null,
+        assignedUserId: null
+      };
+
+      console.log('Submitting Contact Payload to Backend:', payload);
+      await contactsApi.create(payload);
+      console.log('Successfully saved Contact to backend database');
+      await fetchBackendContacts();
+    } catch (err) {
+      console.error('Error saving contact to database:', err);
+    }
+
     setContactForm({
       existingOrg: 'Organization',
       organizationName: '',
@@ -1009,7 +954,9 @@ const ContactsPage = () => {
 
                       {isColVisible('email') && (
                         <td className="py-3.5 px-4 font-semibold text-white">
-                          <span className="hover:text-sky-400 transition-colors cursor-pointer">{contact.email}</span>
+                          <Link to={`/crm/contacts/${contact.id}`} className="hover:text-sky-400 transition-colors cursor-pointer">
+                            {contact.name || contact.email}
+                          </Link>
                         </td>
                       )}
 

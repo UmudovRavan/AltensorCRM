@@ -4,5 +4,9 @@ public enum Gender
 {
     Male,
     Female,
-    Other
+    Other,
+    Genderqueer,
+    NonConforming,
+    PreferNotToSay,
+    Transgender
 }

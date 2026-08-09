@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { leadsApi, orgsApi, contactsApi, notesApi, callLogsApi, usersApi } from '../../services/api';
 import {
   PlusIcon,
@@ -328,6 +329,10 @@ const LeadsPage = () => {
   );
 
   let filteredLeads = leads.filter((item) => {
+    // Hide converted leads from active leads list
+    if (selectedStatus === 'Status' || selectedStatus === 'All') {
+      if (item.status === 'Converted' || item.status === 'ConvertToDeal' || item.status === '5') return false;
+    }
     const matchName = item.name.toLowerCase().includes(filterName.toLowerCase());
     const matchEmail = item.email.toLowerCase().includes(filterEmail.toLowerCase());
     const matchOrg = item.organization.toLowerCase().includes(filterOrg.toLowerCase());
@@ -364,10 +369,15 @@ const LeadsPage = () => {
     setIsFloatingActionsOpen(false);
   };
 
-  const handleDeleteSelected = () => {
-    setLeads(leads.filter((l) => !selectedRows.includes(l.id)));
-    setSelectedRows([]);
-    setIsFloatingActionsOpen(false);
+  const handleDeleteSelected = async () => {
+    try {
+      await Promise.all(selectedRows.map((id) => leadsApi.delete(id)));
+      setLeads(leads.filter((l) => !selectedRows.includes(l.id)));
+      setSelectedRows([]);
+      setIsFloatingActionsOpen(false);
+    } catch (err) {
+      console.error('Error deleting leads:', err);
+    }
   };
 
   const handleConvertToDeal = () => {
@@ -1157,7 +1167,7 @@ const LeadsPage = () => {
                             <span className="w-5 h-5 rounded-full bg-[#27272A] text-[#A1A1AA] text-[10px] font-bold flex items-center justify-center shrink-0">
                               {lead.initial}
                             </span>
-                            <span className="hover:text-sky-400 transition-colors cursor-pointer">{lead.name}</span>
+                            <Link to={`/crm/leads/${lead.id}`} className="hover:text-sky-400 transition-colors cursor-pointer">{lead.name}</Link>
                           </div>
                         </td>
                       )}

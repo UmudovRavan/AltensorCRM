@@ -602,7 +602,7 @@
       {
         "Name": "dto",
         "Type": "Altensorcrm.Contract.DTOs.Common.ConvertLeadToDealDto",
-        "IsRequired": true
+        "IsRequired": false
       }
     ],
     "ReturnTypes": []

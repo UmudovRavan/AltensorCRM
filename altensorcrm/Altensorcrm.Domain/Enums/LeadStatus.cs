@@ -3,8 +3,12 @@ namespace Altensorcrm.Domain.Enums;
 public enum LeadStatus
 {
     New,
-    Connected,
+    Contacted,
     Nurture,
+    Qualified,
+    Converted,
     ConvertToDeal,
+    Unqualified,
+    Junk,
     Failed
 }

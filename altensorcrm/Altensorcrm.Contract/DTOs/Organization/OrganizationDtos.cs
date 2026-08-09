@@ -4,26 +4,26 @@ using Altensorcrm.Domain.Enums;
 namespace Altensorcrm.Contract.DTOs.Organization;
 
 public record CreateOrganizationDto(
-    string OrganizationName,
-    decimal AnnualRevenue,
-    string? Website,
-    Guid? TerritoryId,
-    EmployeeCountRange? NoOfEmployees,
-    IndustryType? Industry,
-    Guid? AddressId,
-    CreateAddressDto? Address
+    string? OrganizationName = null,
+    decimal AnnualRevenue = 0,
+    string? Website = null,
+    Guid? TerritoryId = null,
+    EmployeeCountRange? NoOfEmployees = null,
+    IndustryType? Industry = null,
+    Guid? AddressId = null,
+    CreateAddressDto? Address = null
 );
 
 public record UpdateOrganizationDto(
     Guid Id,
-    string OrganizationName,
-    decimal AnnualRevenue,
-    string? Website,
-    Guid? TerritoryId,
-    EmployeeCountRange? NoOfEmployees,
-    IndustryType? Industry,
-    Guid? AddressId,
-    CreateAddressDto? Address
+    string? OrganizationName = null,
+    decimal AnnualRevenue = 0,
+    string? Website = null,
+    Guid? TerritoryId = null,
+    EmployeeCountRange? NoOfEmployees = null,
+    IndustryType? Industry = null,
+    Guid? AddressId = null,
+    CreateAddressDto? Address = null
 );
 
 public record OrganizationDetailDto

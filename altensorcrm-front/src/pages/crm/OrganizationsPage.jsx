@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { orgsApi } from '../../services/api';
 import {
   PlusIcon,
@@ -84,63 +85,7 @@ const filterFields = [
   'Last Modified'
 ];
 
-const initialOrganizations = [
-  {
-    id: '1',
-    organization: 'estetik dis',
-    orgInitial: 'E',
-    website: 'estetik dis',
-    industry: 'Chemical',
-    employees: '1-10',
-    territory: 'Azerbaijan',
-    annualRevenue: '$ 0.00',
-    lastModified: '2 days ago'
-  },
-  {
-    id: '2',
-    organization: 'Ali mmc',
-    orgInitial: 'A',
-    website: '',
-    industry: 'Accounting',
-    employees: '11-50',
-    territory: 'Azerbaijan',
-    annualRevenue: '$ 0.00',
-    lastModified: '3 days ago'
-  },
-  {
-    id: '3',
-    organization: 'xalq bank',
-    orgInitial: 'X',
-    website: 'xalqbank.com',
-    industry: '',
-    employees: '501-1000',
-    territory: 'Azerbaijan',
-    annualRevenue: '$ 0.00',
-    lastModified: '5 days ago'
-  },
-  {
-    id: '4',
-    organization: 'BMG INTERNATIONAL',
-    orgInitial: 'B',
-    website: 'BMGINT.COM',
-    industry: 'Consulting',
-    employees: '51-200',
-    territory: 'Global',
-    annualRevenue: '$ 1,000,000.00',
-    lastModified: '1 week ago'
-  },
-  {
-    id: '5',
-    organization: 'ALTENSOR',
-    orgInitial: 'A',
-    website: 'altensor.com',
-    industry: 'Computer',
-    employees: '11-50',
-    territory: 'Global',
-    annualRevenue: '$ 10,000.00',
-    lastModified: '3 weeks ago'
-  }
-];
+const initialOrganizations = [];
 
 const OrganizationsPage = () => {
   const [organizations, setOrganizations] = useState(initialOrganizations);
@@ -306,34 +251,100 @@ const OrganizationsPage = () => {
     setIsFloatingActionsOpen(false);
   };
 
-  const handleDeleteSelected = () => {
-    setOrganizations(organizations.filter((o) => !selectedRows.includes(o.id)));
-    setSelectedRows([]);
-    setIsFloatingActionsOpen(false);
+  const handleDeleteSelected = async () => {
+    try {
+      await Promise.all(selectedRows.map((id) => orgsApi.delete(id)));
+      setOrganizations(organizations.filter((o) => !selectedRows.includes(o.id)));
+      setSelectedRows([]);
+      setIsFloatingActionsOpen(false);
+    } catch (err) {
+      console.error('Error deleting organizations:', err);
+    }
   };
 
   const toggleColumnVisibility = (key) => {
     setColumns(columns.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c)));
   };
 
-  const handleFullCreateOrgSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchBackendOrganizations();
+  }, []);
+
+  const fetchBackendOrganizations = async () => {
+    try {
+      setLoading(true);
+      const data = await orgsApi.getAll();
+      if (data && (data.items || Array.isArray(data))) {
+        const list = data.items || data;
+        const mapped = list.map(o => {
+          const nameStr = o.organizationName || o.OrganizationName || 'Organization';
+          const revVal = typeof o.annualRevenue === 'number' ? `$ ${o.annualRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : `$ ${o.annualRevenue || '0.00'}`;
+          return {
+            id: String(o.id || o.Id),
+            organization: nameStr,
+            orgInitial: nameStr.charAt(0).toUpperCase() || 'O',
+            website: o.website || '',
+            industry: o.industryName || o.industry || '',
+            employees: o.noOfEmployees || '1-10',
+            territory: o.territoryName || o.territory || '',
+            annualRevenue: revVal,
+            lastModified: 'Just now'
+          };
+        });
+        setOrganizations(mapped);
+      }
+    } catch (err) {
+      console.warn('Backend API organizations fetch notice:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFullCreateOrgSubmit = async (e) => {
     e.preventDefault();
-    if (!orgForm.organizationName) return;
+    const nameStr = orgForm.organizationName ? orgForm.organizationName.trim() : 'New Organization';
+
+    const rawRev = String(orgForm.annualRevenue || '0').replace(/[^0-9.]/g, '');
+    const numRevenue = parseFloat(rawRev) || 0;
+    const formattedRevenue = `$ ${numRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
     const newOrg = {
       id: String(Date.now()),
-      organization: orgForm.organizationName,
-      orgInitial: orgForm.organizationName.charAt(0).toUpperCase(),
+      organization: nameStr,
+      orgInitial: nameStr.charAt(0).toUpperCase() || 'O',
       website: orgForm.website || '',
       industry: orgForm.industry === 'Industry' ? '' : orgForm.industry,
       employees: orgForm.employees,
       territory: orgForm.territory === 'Territory' ? '' : orgForm.territory,
-      annualRevenue: orgForm.annualRevenue ? `$ ${orgForm.annualRevenue}` : '$ 0.00',
+      annualRevenue: formattedRevenue,
       lastModified: 'Just now'
     };
 
-    setOrganizations([newOrg, ...organizations]);
+    setOrganizations((prev) => [newOrg, ...prev]);
     setIsCreateModalOpen(false);
+
+    try {
+      const payload = {
+        organizationName: nameStr,
+        annualRevenue: numRevenue,
+        website: orgForm.website ? orgForm.website.trim() : '',
+        territoryId: null,
+        noOfEmployees: null,
+        industry: null,
+        addressId: null,
+        address: null
+      };
+
+      console.log('Submitting Organization Payload to Backend:', payload);
+      await orgsApi.create(payload);
+      console.log('Successfully saved Organization to backend database');
+      await fetchBackendOrganizations();
+    } catch (err) {
+      console.error('Error saving organization to database:', err);
+    }
+
     setOrgForm({
       organizationName: '',
       website: '',
@@ -957,7 +968,9 @@ const OrganizationsPage = () => {
                             <span className="w-5 h-5 rounded-full bg-[#27272A] text-[#A1A1AA] text-[10px] font-bold flex items-center justify-center shrink-0">
                               {org.orgInitial}
                             </span>
-                            <span className="hover:text-sky-400 transition-colors cursor-pointer">{org.organization}</span>
+                            <Link to={`/crm/organizations/${org.id}`} className="hover:text-sky-400 transition-colors cursor-pointer">
+                              {org.organization}
+                            </Link>
                           </div>
                         </td>
                       )}

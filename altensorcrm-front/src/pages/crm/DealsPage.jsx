@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { dealsApi } from '../../services/api';
 import {
   PlusIcon,
@@ -404,10 +405,15 @@ const DealsPage = () => {
     setIsFloatingActionsOpen(false);
   };
 
-  const handleDeleteSelected = () => {
-    setDeals(deals.filter((d) => !selectedRows.includes(d.id)));
-    setSelectedRows([]);
-    setIsFloatingActionsOpen(false);
+  const handleDeleteSelected = async () => {
+    try {
+      await Promise.all(selectedRows.map((id) => dealsApi.delete(id)));
+      setDeals(deals.filter((d) => !selectedRows.includes(d.id)));
+      setSelectedRows([]);
+      setIsFloatingActionsOpen(false);
+    } catch (err) {
+      console.error('Error deleting deals:', err);
+    }
   };
 
   const toggleColumnVisibility = (key) => {
@@ -1108,7 +1114,9 @@ const DealsPage = () => {
                             <span className="w-5 h-5 rounded-full bg-[#27272A] text-[#A1A1AA] text-[10px] font-bold flex items-center justify-center shrink-0">
                               {deal.orgInitial}
                             </span>
-                            <span className="hover:text-sky-400 transition-colors cursor-pointer">{deal.organization}</span>
+                            <Link to={`/crm/deals/${deal.id}`} className="hover:text-sky-400 transition-colors cursor-pointer">
+                              {deal.organization}
+                            </Link>
                           </div>
                         </td>
                       )}
@@ -1215,7 +1223,9 @@ const DealsPage = () => {
                         <span className="w-5 h-5 rounded-full bg-[#27272A] text-[#A1A1AA] text-[10px] font-bold flex items-center justify-center shrink-0">
                           {deal.orgInitial}
                         </span>
-                        <span className="font-bold text-white group-hover:text-sky-400 transition-colors">{deal.organization}</span>
+                        <Link to={`/crm/deals/${deal.id}`} className="font-bold text-white hover:text-sky-400 transition-colors cursor-pointer">
+                          {deal.organization}
+                        </Link>
                       </div>
 
                       <div className="text-sm font-extrabold text-sky-400">{deal.annualRevenue}</div>

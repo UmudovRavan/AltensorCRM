@@ -43,8 +43,8 @@ public record OrganizationFilterDto(
 );
 
 public record ConvertLeadToDealDto(
-    decimal DealAmount,
-    Guid AssignedUserId
+    decimal DealAmount = 0,
+    Guid? AssignedUserId = null
 );
 
 public record EmployeeMetricDto(

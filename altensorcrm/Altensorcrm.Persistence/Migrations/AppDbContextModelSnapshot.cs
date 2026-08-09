@@ -496,7 +496,7 @@ namespace Altensorcrm.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("NOW()");
 
-                    b.Property<Guid>("CreatedById")
+                    b.Property<Guid?>("CreatedById")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("DealId")
@@ -1163,8 +1163,7 @@ namespace Altensorcrm.Persistence.Migrations
                     b.HasOne("Altensorcrm.Domain.Entity.User", "CreatedBy")
                         .WithMany("CreatedNotes")
                         .HasForeignKey("CreatedById")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Altensorcrm.Domain.Entity.Deal", "Deal")
                         .WithMany("Notes")

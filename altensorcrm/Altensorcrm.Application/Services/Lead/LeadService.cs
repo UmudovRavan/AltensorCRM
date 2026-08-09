@@ -162,18 +162,34 @@ public class LeadService : ILeadService
                 await _unitOfWork.Organizations.AddAsync(organization, cancellationToken);
             }
 
+            Guid? assignedUserId = dto.AssignedUserId;
+            if (assignedUserId.HasValue && assignedUserId.Value != Guid.Empty)
+            {
+                var userExists = await _unitOfWork.Repository<Domain.Entity.User>().ExistsAsync(u => u.Id == assignedUserId.Value, cancellationToken);
+                if (!userExists) assignedUserId = null;
+            }
+            if (!assignedUserId.HasValue || assignedUserId.Value == Guid.Empty)
+            {
+                assignedUserId = lead.LeadOwnerId;
+                if (!assignedUserId.HasValue || assignedUserId.Value == Guid.Empty)
+                {
+                    var firstUser = (await _unitOfWork.Repository<Domain.Entity.User>().GetAllAsync(cancellationToken)).FirstOrDefault();
+                    assignedUserId = firstUser?.Id;
+                }
+            }
+
             var contact = new ContactEntity
             {
                 Id = Guid.NewGuid(),
                 Salutation = lead.Salutation,
-                FirstName = lead.FirstName,
-                LastName = lead.LastName,
-                EmailAddress = lead.Email,
-                MobileNo = lead.MobileNo,
+                FirstName = string.IsNullOrWhiteSpace(lead.FirstName) ? "Contact" : lead.FirstName,
+                LastName = lead.LastName ?? string.Empty,
+                EmailAddress = lead.Email ?? string.Empty,
+                MobileNo = lead.MobileNo ?? string.Empty,
                 Gender = lead.Gender,
                 CompanyName = lead.CompanyName,
                 OrganizationId = organization.Id,
-                AssignedUserId = dto.AssignedUserId,
+                AssignedUserId = assignedUserId,
                 CreatedAt = DateTime.UtcNow
             };
             await _unitOfWork.Contacts.AddAsync(contact, cancellationToken);
@@ -185,11 +201,11 @@ public class LeadService : ILeadService
             {
                 Id = Guid.NewGuid(),
                 OrganizationName = lead.CompanyName,
-                PrimaryEmail = lead.Email,
-                PrimaryMobileNo = lead.MobileNo,
+                PrimaryEmail = lead.Email ?? string.Empty,
+                PrimaryMobileNo = lead.MobileNo ?? string.Empty,
                 Salutation = lead.Salutation,
-                FirstName = lead.FirstName,
-                LastName = lead.LastName,
+                FirstName = string.IsNullOrWhiteSpace(lead.FirstName) ? "Contact" : lead.FirstName,
+                LastName = lead.LastName ?? string.Empty,
                 Gender = lead.Gender,
                 Website = lead.Website,
                 NoOfEmployees = lead.NoOfEmployees,
@@ -197,7 +213,7 @@ public class LeadService : ILeadService
                 AnnualRevenue = dto.DealAmount,
                 Industry = lead.Industry,
                 Status = DealStatus.Qualification,
-                DealOwnerId = dto.AssignedUserId,
+                DealOwnerId = assignedUserId,
                 SourceLeadId = lead.Id,
                 OrganizationId = organization.Id,
                 ContactId = contact.Id,

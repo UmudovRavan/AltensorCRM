@@ -51,53 +51,7 @@ const defaultLayoutSections = [
 const sortFields = ['Title', 'Content', 'Last Modified'];
 const filterFields = ['Title', 'Content', 'Owner', 'Last Modified'];
 
-const initialNotes = [
-  {
-    id: '1',
-    title: 'ramiz muellim doktor',
-    content: 'ramiz muellim doktor 456 dis',
-    owner: 'Elvin Muzaffarli',
-    ownerInitial: 'E',
-    lastModified: '2 days ago',
-    linkedEntity: 'Open Lead'
-  },
-  {
-    id: '2',
-    title: 'notes',
-    content: 'motes 2',
-    owner: 'Elvin Muzaffarli',
-    ownerInitial: 'E',
-    lastModified: '3 days ago',
-    linkedEntity: 'Open Lead'
-  },
-  {
-    id: '3',
-    title: 'erp sistemleri tedrisi',
-    content: 'Bextiyar muellim ve kamandasina erp sistemleri tedris edilsin.',
-    owner: 'Elvin Muzaffarli',
-    ownerInitial: 'E',
-    lastModified: '5 days ago',
-    linkedEntity: 'Open Lead'
-  },
-  {
-    id: '4',
-    title: 'Muhasibatliq kursu',
-    content: 'Nermin xanima muhasibatliq kursu verilsin',
-    owner: 'Elvin Muzaffarli',
-    ownerInitial: 'E',
-    lastModified: '5 days ago',
-    linkedEntity: 'Open Lead'
-  },
-  {
-    id: '5',
-    title: 'Elvin beyin dostlari',
-    content: '3 dost gedecekler',
-    owner: 'Said Baghirov',
-    ownerInitial: 'S',
-    lastModified: '3 weeks ago',
-    linkedEntity: 'Open Lead'
-  }
-];
+const initialNotes = [];
 
 // REAL WORKING RICH TEXT EDITOR COMPONENT (Matching Screenshots 1 & 2!)
 const RichTextEditor = ({ value, onChange }) => {
@@ -543,32 +497,99 @@ const NotesPage = () => {
     setIsNoteModalOpen(true);
   };
 
-  const handleSaveNoteSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchBackendNotes();
+  }, []);
+
+  const fetchBackendNotes = async () => {
+    try {
+      setLoading(true);
+      const data = await notesApi.getAll();
+      if (data && (data.items || Array.isArray(data))) {
+        const list = data.items || data;
+        const mapped = list.map(n => {
+          const ownerStr = n.createdByName || n.owner || 'Administrator';
+          return {
+            id: String(n.id || n.Id),
+            title: n.title || 'Untitled Note',
+            content: n.content || '',
+            owner: ownerStr,
+            ownerInitial: ownerStr.charAt(0).toUpperCase() || 'A',
+            lastModified: 'Just now',
+            linkedEntity: 'Open Lead'
+          };
+        });
+        setNotes(mapped);
+      }
+    } catch (err) {
+      console.warn('Backend API notes fetch notice:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveNoteSubmit = async (e) => {
     e.preventDefault();
-    if (!noteForm.title) return;
+    const titleStr = noteForm.title ? noteForm.title.trim() : 'Untitled Note';
 
     if (activeModalType === 'Create') {
       const ownerObj = initialOwnerList.find(o => o.name === noteForm.owner) || initialOwnerList[0];
       const newNote = {
         id: String(Date.now()),
-        title: noteForm.title,
-        content: noteForm.content,
+        title: titleStr,
+        content: noteForm.content || '',
         owner: ownerObj.name,
         ownerInitial: ownerObj.initial,
         lastModified: 'Just now',
         linkedEntity: 'Open Lead'
       };
-      setNotes([newNote, ...notes]);
+      setNotes((prev) => [newNote, ...prev]);
+      setIsNoteModalOpen(false);
+
+      try {
+        const payload = {
+          title: titleStr,
+          content: noteForm.content || '',
+          createdById: null,
+          leadId: null,
+          dealId: null
+        };
+
+        console.log('Submitting Note Payload to Backend:', payload);
+        await notesApi.create(payload);
+        console.log('Successfully saved Note to backend database');
+        await fetchBackendNotes();
+      } catch (err) {
+        console.error('Error saving note to database:', err);
+      }
     } else {
-      setNotes(notes.map(n => n.id === noteForm.id ? { ...n, title: noteForm.title, content: noteForm.content } : n));
+      setNotes(notes.map(n => n.id === noteForm.id ? { ...n, title: titleStr, content: noteForm.content } : n));
+      setIsNoteModalOpen(false);
+      try {
+        await notesApi.update(noteForm.id, {
+          id: noteForm.id,
+          title: titleStr,
+          content: noteForm.content || ''
+        });
+        await fetchBackendNotes();
+      } catch (err) {
+        console.error('Error updating note in database:', err);
+      }
     }
-    setIsNoteModalOpen(false);
   };
 
-  const handleDeleteNote = (id, e) => {
+  const handleDeleteNote = async (id, e) => {
     if (e) e.stopPropagation();
-    setNotes(notes.filter(n => n.id !== id));
-    setCardContextMenu(null);
+    try {
+      await notesApi.delete(id);
+      setNotes(notes.filter(n => String(n.id) !== String(id)));
+    } catch (err) {
+      console.error('Error deleting note:', err);
+    } finally {
+      setCardContextMenu(null);
+    }
   };
 
   // Layout Modification Functions

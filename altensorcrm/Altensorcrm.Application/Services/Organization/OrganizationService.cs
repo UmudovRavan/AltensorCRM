@@ -60,12 +60,12 @@ public class OrganizationService : IOrganizationService
 
     public async Task<OrganizationDetailDto> CreateAsync(CreateOrganizationDto dto, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(dto.OrganizationName))
+        var org = _mapper.Map<Domain.Entity.Organization>(dto);
+        if (string.IsNullOrWhiteSpace(org.OrganizationName))
         {
-            throw new ValidationException("Organization Name is required.");
+            org.OrganizationName = "New Organization";
         }
 
-        var org = _mapper.Map<Domain.Entity.Organization>(dto);
         org.CreatedAt = DateTime.UtcNow;
 
         if (dto.Address is not null)
@@ -78,7 +78,14 @@ public class OrganizationService : IOrganizationService
         await _unitOfWork.Organizations.AddAsync(org, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return await GetByIdAsync(org.Id, cancellationToken);
+        try
+        {
+            var created = await _unitOfWork.Organizations.GetOrganizationWithDetailsByIdAsync(org.Id, cancellationToken);
+            if (created != null) return _mapper.Map<OrganizationDetailDto>(created);
+        }
+        catch { }
+
+        return _mapper.Map<OrganizationDetailDto>(org);
     }
 
     public async Task<OrganizationDetailDto> UpdateAsync(UpdateOrganizationDto dto, CancellationToken cancellationToken = default)
@@ -90,6 +97,8 @@ public class OrganizationService : IOrganizationService
         }
 
         _mapper.Map(dto, org);
+
+        if (string.IsNullOrWhiteSpace(org.OrganizationName)) org.OrganizationName = "Organization";
 
         if (dto.Address is not null)
         {

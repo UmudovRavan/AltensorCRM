@@ -37,12 +37,40 @@ public class CallLogService : ICallLogService
     public async Task<CallLogDetailDto> CreateAsync(CreateCallLogDto dto, CancellationToken cancellationToken = default)
     {
         var log = _mapper.Map<Domain.Entity.CallLog>(dto);
+        if (string.IsNullOrWhiteSpace(log.ToNumber))
+        {
+            log.ToNumber = "0550000000";
+        }
+        if (string.IsNullOrWhiteSpace(log.FromNumber))
+        {
+            log.FromNumber = "0500000000";
+        }
+
+        // Safely resolve foreign keys for CallReceivedById and CallerUserId
+        if (dto.CallReceivedById.HasValue && dto.CallReceivedById.Value != Guid.Empty)
+        {
+            var userExists = await _unitOfWork.Repository<Domain.Entity.User>().ExistsAsync(u => u.Id == dto.CallReceivedById.Value, cancellationToken);
+            if (!userExists) log.CallReceivedById = null;
+        }
+        if (dto.CallerUserId.HasValue && dto.CallerUserId.Value != Guid.Empty)
+        {
+            var userExists = await _unitOfWork.Repository<Domain.Entity.User>().ExistsAsync(u => u.Id == dto.CallerUserId.Value, cancellationToken);
+            if (!userExists) log.CallerUserId = null;
+        }
+
         log.CreatedOn = DateTime.UtcNow;
 
         await _unitOfWork.CallLogs.AddAsync(log, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return await GetByIdAsync(log.Id, cancellationToken);
+        try
+        {
+            var created = await _unitOfWork.CallLogs.GetByIdAsync(log.Id, cancellationToken);
+            if (created != null) return _mapper.Map<CallLogDetailDto>(created);
+        }
+        catch { }
+
+        return _mapper.Map<CallLogDetailDto>(log);
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)

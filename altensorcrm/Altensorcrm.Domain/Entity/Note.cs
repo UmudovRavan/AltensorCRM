@@ -6,8 +6,8 @@ public class Note
     public string Title { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
 
-    public Guid CreatedById { get; set; }
-    public User CreatedBy { get; set; } = null!;
+    public Guid? CreatedById { get; set; }
+    public User? CreatedBy { get; set; }
 
     public Guid? LeadId { get; set; }
     public Lead? Lead { get; set; }

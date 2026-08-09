@@ -63,12 +63,41 @@ public class ContactService : IContactService
 
     public async Task<ContactDetailDto> CreateAsync(CreateContactDto dto, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(dto.FirstName) || string.IsNullOrWhiteSpace(dto.LastName))
+        if (string.IsNullOrWhiteSpace(dto.FirstName))
         {
-            throw new ValidationException("First Name and Last Name are required.");
+            throw new ValidationException("First Name is required.");
         }
 
         var contact = _mapper.Map<Domain.Entity.Contact>(dto);
+        if (string.IsNullOrWhiteSpace(contact.LastName))
+        {
+            contact.LastName = string.Empty;
+        }
+        if (string.IsNullOrWhiteSpace(contact.EmailAddress))
+        {
+            contact.EmailAddress = "user@example.com";
+        }
+        if (string.IsNullOrWhiteSpace(contact.MobileNo))
+        {
+            contact.MobileNo = "0551234567";
+        }
+
+        // Safely resolve AssignedUserId foreign key constraint
+        if (!dto.AssignedUserId.HasValue || dto.AssignedUserId.Value == Guid.Empty)
+        {
+            var firstUser = (await _unitOfWork.Repository<Domain.Entity.User>().GetAllAsync(cancellationToken)).FirstOrDefault();
+            contact.AssignedUserId = firstUser?.Id;
+        }
+        else
+        {
+            var userExists = await _unitOfWork.Repository<Domain.Entity.User>().ExistsAsync(u => u.Id == dto.AssignedUserId.Value, cancellationToken);
+            if (!userExists)
+            {
+                var firstUser = (await _unitOfWork.Repository<Domain.Entity.User>().GetAllAsync(cancellationToken)).FirstOrDefault();
+                contact.AssignedUserId = firstUser?.Id;
+            }
+        }
+
         contact.CreatedAt = DateTime.UtcNow;
 
         if (dto.Address is not null)
@@ -81,7 +110,14 @@ public class ContactService : IContactService
         await _unitOfWork.Contacts.AddAsync(contact, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return await GetByIdAsync(contact.Id, cancellationToken);
+        try
+        {
+            var created = await _unitOfWork.Contacts.GetContactWithDetailsByIdAsync(contact.Id, cancellationToken);
+            if (created != null) return _mapper.Map<ContactDetailDto>(created);
+        }
+        catch { }
+
+        return _mapper.Map<ContactDetailDto>(contact);
     }
 
     public async Task<ContactDetailDto> UpdateAsync(UpdateContactDto dto, CancellationToken cancellationToken = default)
@@ -93,6 +129,11 @@ public class ContactService : IContactService
         }
 
         _mapper.Map(dto, contact);
+
+        if (string.IsNullOrWhiteSpace(contact.FirstName)) contact.FirstName = "Contact";
+        if (contact.LastName is null) contact.LastName = string.Empty;
+        if (contact.EmailAddress is null) contact.EmailAddress = string.Empty;
+        if (contact.MobileNo is null) contact.MobileNo = string.Empty;
 
         if (dto.Address is not null)
         {

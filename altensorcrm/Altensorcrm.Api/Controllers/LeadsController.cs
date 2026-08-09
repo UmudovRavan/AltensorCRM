@@ -57,8 +57,9 @@ public class LeadsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/convert-to-deal")]
-    public async Task<IActionResult> ConvertToDeal(Guid id, [FromBody] ConvertLeadToDealDto dto, CancellationToken cancellationToken)
+    public async Task<IActionResult> ConvertToDeal(Guid id, [FromBody] ConvertLeadToDealDto? dto, CancellationToken cancellationToken)
     {
+        dto ??= new ConvertLeadToDealDto(0, null);
         var result = await _leadService.ConvertLeadToDealAsync(id, dto, cancellationToken);
         return Ok(result);
     }

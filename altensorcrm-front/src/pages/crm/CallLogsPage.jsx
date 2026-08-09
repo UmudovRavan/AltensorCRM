@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { callLogsApi } from '../../services/api';
+import { Link } from 'react-router-dom';
+import { callLogsApi, leadsApi } from '../../services/api';
 import {
   PlusIcon,
   ArrowPathIcon,
@@ -20,7 +21,13 @@ import {
   AdjustmentsHorizontalIcon,
   PencilSquareIcon,
   PhoneArrowDownLeftIcon,
-  PhoneArrowUpRightIcon
+  PhoneArrowUpRightIcon,
+  UserIcon,
+  UserGroupIcon,
+  CalendarIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  ArrowTopRightOnSquareIcon
 } from '@heroicons/react/24/outline';
 
 const telephonyMediums = ['Manual', 'Twilio', 'Exotel'];
@@ -95,64 +102,13 @@ const filterFields = [
   'To (number)'
 ];
 
-const initialCallLogs = [
-  {
-    id: '1',
-    caller: 'Unknown',
-    callerInitial: 'U',
-    receiver: 'Yusif Hashimov',
-    receiverInitial: 'Y',
-    type: 'Incoming',
-    status: 'In Progress',
-    duration: '3s',
-    fromNumber: '0507656454',
-    toNumber: '0554353536',
-    medium: 'Twilio',
-    createdOn: '3 weeks ago'
-  },
-  {
-    id: '2',
-    caller: 'Ramiz Muellim',
-    callerInitial: 'R',
-    receiver: 'Elvin Muzaffarli',
-    receiverInitial: 'E',
-    type: 'Outgoing',
-    status: 'Completed',
-    duration: '1m 42s',
-    fromNumber: '0501234567',
-    toNumber: '0559876543',
-    medium: 'Manual',
-    createdOn: '2 days ago'
-  },
-  {
-    id: '3',
-    caller: 'Ali MMC',
-    callerInitial: 'A',
-    receiver: 'Administrator',
-    receiverInitial: 'A',
-    type: 'Incoming',
-    status: 'No Answer',
-    duration: '0s',
-    fromNumber: '0124445566',
-    toNumber: '0507656454',
-    medium: 'Exotel',
-    createdOn: '5 days ago'
-  },
-  {
-    id: '4',
-    caller: 'BMG International',
-    callerInitial: 'B',
-    receiver: 'Said Baghirov',
-    receiverInitial: 'S',
-    type: 'Outgoing',
-    status: 'Busy',
-    duration: '0s',
-    fromNumber: '0554353536',
-    toNumber: '0129998877',
-    medium: 'Twilio',
-    createdOn: '1 week ago'
-  }
+const initialOwnerList = [
+  { name: 'Administrator', initial: 'A', email: 'admin@altensor.io' },
+  { name: 'Elvin Muzaffarli', initial: 'E', email: 'elvinmuzaffarli@gmail.com' },
+  { name: 'Yusif Hashimov', initial: 'Y', email: 'yusif@altensor.io' }
 ];
+
+const initialCallLogs = [];
 
 const CallLogsPage = () => {
   const [callLogs, setCallLogs] = useState(initialCallLogs);
@@ -171,6 +127,7 @@ const CallLogsPage = () => {
 
   const [fromNumberFilter, setFromNumberFilter] = useState('');
   const [toNumberFilter, setToNumberFilter] = useState('');
+  const [selectedCallDetail, setSelectedCallDetail] = useState(null);
 
   // Views & Dropdowns
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -314,37 +271,156 @@ const CallLogsPage = () => {
     setIsFloatingActionsOpen(false);
   };
 
-  const handleDeleteSelected = () => {
-    setCallLogs(callLogs.filter((c) => !selectedRows.includes(c.id)));
-    setSelectedRows([]);
-    setIsFloatingActionsOpen(false);
+  const handleDeleteSelected = async () => {
+    try {
+      await Promise.all(selectedRows.map((id) => callLogsApi.delete(id)));
+      setCallLogs(callLogs.filter((c) => !selectedRows.includes(c.id)));
+      setSelectedRows([]);
+      setIsFloatingActionsOpen(false);
+    } catch (err) {
+      console.error('Error deleting call logs:', err);
+    }
   };
 
   const toggleColumnVisibility = (key) => {
     setColumns(columns.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c)));
   };
 
-  const handleCreateCallSubmit = (e) => {
-    e.preventDefault();
-    if (!callForm.caller) return;
+  const [ownersList, setOwnersList] = useState(initialOwnerList);
+  const [loading, setLoading] = useState(false);
 
-    const newCall = {
+  useEffect(() => {
+    fetchBackendCallLogs();
+  }, []);
+
+  const fetchBackendCallLogs = async () => {
+    try {
+      setLoading(true);
+      const [data, leadsData] = await Promise.all([
+        callLogsApi.getAll(),
+        leadsApi.getAll().catch(() => [])
+      ]);
+
+      const leadsList = Array.isArray(leadsData) ? leadsData : leadsData?.items || [];
+      const firstLeadId = leadsList.length > 0 ? leadsList[0].id : null;
+
+      if (data && (data.items || Array.isArray(data))) {
+        const list = data.items || data;
+        const mapped = list.map(c => {
+          const typeStr = c.type === 1 || c.type === 'Outgoing' ? 'Outgoing' : 'Incoming';
+          const statusStr = c.statusName || c.status || 'Completed';
+          const callerStr = c.callerUserName || c.caller || 'Unknown';
+          const receiverStr = c.callReceivedByName || c.receiver || 'Administrator';
+          const durStr = c.formattedDuration || (c.durationInSeconds ? `${c.durationInSeconds}s` : '0s');
+
+          const dateObj = c.createdAt ? new Date(c.createdAt) : new Date();
+          const formattedDate = dateObj.toLocaleString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+
+          // Match specific Lead by LeadId or caller/receiver name
+          let matchedLead = null;
+          if (c.leadId || c.LeadId) {
+            matchedLead = leadsList.find(l => String(l.id).toLowerCase() === String(c.leadId || c.LeadId).toLowerCase());
+          }
+          if (!matchedLead && (callerStr || receiverStr)) {
+            matchedLead = leadsList.find(l => 
+              (l.name && (l.name.toLowerCase().includes(callerStr.toLowerCase()) || l.name.toLowerCase().includes(receiverStr.toLowerCase()))) ||
+              (l.firstName && (callerStr.toLowerCase().includes(l.firstName.toLowerCase()) || receiverStr.toLowerCase().includes(l.firstName.toLowerCase())))
+            );
+          }
+
+          const targetLeadId = matchedLead?.id || c.leadId || c.LeadId || firstLeadId;
+
+          return {
+            id: String(c.id || c.Id),
+            caller: callerStr,
+            callerInitial: callerStr.charAt(0).toUpperCase() || 'U',
+            receiver: receiverStr,
+            receiverInitial: receiverStr.charAt(0).toUpperCase() || 'A',
+            type: typeStr,
+            status: statusStr,
+            duration: durStr,
+            fromNumber: c.fromNumber || '',
+            toNumber: c.toNumber || '',
+            medium: 'Manual',
+            createdOn: formattedDate,
+            formattedDate: formattedDate,
+            leadId: targetLeadId,
+            contactId: c.contactId || c.ContactId || null,
+            dealId: c.dealId || c.DealId || null,
+            entityType: 'Lead'
+          };
+        });
+        setCallLogs(mapped);
+      }
+    } catch (err) {
+      console.warn('Backend API call logs fetch notice:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const mapCallStatusToEnum = (status) => {
+    if (!status || status === 'Status') return 'Completed';
+    if (status.includes('Progress')) return 'InProgress';
+    if (status === 'Completed') return 'Completed';
+    if (status === 'Failed' || status === 'Busy' || status.includes('Answer')) return 'Failed';
+    if (status === 'Canceled' || status === 'Cancelled') return 'Cancelled';
+    return 'Completed';
+  };
+
+  const handleCreateCallSubmit = async (e) => {
+    e.preventDefault();
+    const typeStr = callForm.type === 'Outgoing' ? 'Outgoing' : 'Incoming';
+
+    const logObj = {
       id: String(Date.now()),
-      caller: callForm.caller,
-      callerInitial: callForm.caller.charAt(0).toUpperCase(),
-      receiver: callForm.receiver,
-      receiverInitial: callForm.receiver.charAt(0).toUpperCase(),
-      type: callForm.type,
-      status: callForm.status,
+      caller: callForm.caller || 'Unknown',
+      callerInitial: (callForm.caller || 'U').charAt(0).toUpperCase(),
+      receiver: callForm.receiver || 'Administrator',
+      receiverInitial: (callForm.receiver || 'A').charAt(0).toUpperCase(),
+      type: typeStr,
+      status: callForm.status || 'Completed',
       duration: callForm.duration || '0s',
       fromNumber: callForm.fromNumber || '0500000000',
       toNumber: callForm.toNumber || '0550000000',
-      medium: callForm.medium,
+      medium: 'Manual',
       createdOn: 'Just now'
     };
 
-    setCallLogs([newCall, ...callLogs]);
+    setCallLogs((prev) => [logObj, ...prev]);
     setIsCreateModalOpen(false);
+
+    const durSec = parseInt(String(callForm.duration || '0').replace(/[^0-9]/g, '')) || 0;
+
+    try {
+      const payload = {
+        type: typeStr,
+        toNumber: callForm.toNumber || '0550000000',
+        fromNumber: callForm.fromNumber || '0500000000',
+        status: mapCallStatusToEnum(callForm.status),
+        durationInSeconds: durSec,
+        callReceivedById: null,
+        callerUserId: null,
+        leadId: null,
+        dealId: null
+      };
+
+      console.log('Submitting CallLog Payload to Backend:', payload);
+      await callLogsApi.create(payload);
+      console.log('Successfully saved CallLog to backend database');
+      await fetchBackendCallLogs();
+    } catch (err) {
+      console.error('Error saving call log to database:', err);
+    }
+
     setCallForm({
       caller: 'Unknown',
       receiver: 'Yusif Hashimov',
@@ -976,7 +1052,8 @@ const CallLogsPage = () => {
                   return (
                     <tr
                       key={call.id}
-                      className={`hover:bg-[#18181B]/80 transition-colors ${
+                      onClick={() => setSelectedCallDetail(call)}
+                      className={`hover:bg-[#18181B]/80 transition-colors cursor-pointer ${
                         isSelected ? 'bg-[#18181B]' : ''
                       }`}
                     >
@@ -1368,7 +1445,7 @@ const CallLogsPage = () => {
                 </div>
               </div>
 
-              {/* Row 3: Duration (Left Side - Screenshot Match!) */}
+              {/* Row 3: Duration & Dynamic User Selection (Incoming: Call Received By vs Outgoing: Caller) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-[#A1A1AA] font-medium">Duration</label>
@@ -1379,6 +1456,59 @@ const CallLogsPage = () => {
                     onChange={(e) => setCallForm({ ...callForm, duration: e.target.value })}
                     className="w-full bg-[#141416] border border-[#2C2C2E] rounded-xl px-3 py-2 text-xs text-white placeholder:text-[#71717A] focus:outline-none focus:border-sky-500"
                   />
+                </div>
+
+                {/* Dynamic User Dropdown (Call Received By for Incoming, Caller for Outgoing) */}
+                <div className="space-y-1.5 relative">
+                  <label className="text-[#A1A1AA] font-medium">
+                    {callForm.type === 'Incoming' ? 'Call Received By' : 'Caller'}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setOpenDropdownField(openDropdownField === 'callUser' ? null : 'callUser'); setDropdownSearch(''); }}
+                    className="flex items-center justify-between w-full bg-[#141416] border border-[#2C2C2E] rounded-xl px-3 py-2 text-xs text-[#D4D4D8] focus:outline-none focus:border-sky-500 cursor-pointer"
+                  >
+                    <span className="truncate">
+                      {callForm.type === 'Incoming' ? (callForm.receiver || 'Call Received By') : (callForm.caller || 'Caller')}
+                    </span>
+                    <ChevronDownIcon className="w-3.5 h-3.5 text-[#71717A] shrink-0" />
+                  </button>
+
+                  {openDropdownField === 'callUser' && (
+                    <div className="absolute top-14 left-0 w-full bg-[#1C1C1E] border border-[#2C2C2E] rounded-2xl shadow-2xl p-2 z-[100] text-xs text-[#E4E4E7] space-y-2 animate-in fade-in duration-150">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search"
+                          value={dropdownSearch}
+                          onChange={(e) => setDropdownSearch(e.target.value)}
+                          className="w-full bg-[#141416] border border-[#2C2C2E] rounded-xl pl-3 pr-7 py-1.5 text-xs text-white placeholder:text-[#71717A] focus:outline-none focus:border-sky-500"
+                        />
+                      </div>
+
+                      <div className="max-h-40 overflow-y-auto space-y-0.5 custom-scrollbar pr-1">
+                        {ownersList.filter(o => o.name.toLowerCase().includes(dropdownSearch.toLowerCase())).map((usr) => (
+                          <button
+                            key={usr.name}
+                            type="button"
+                            onClick={() => {
+                              if (callForm.type === 'Incoming') {
+                                setCallForm({ ...callForm, receiver: usr.name });
+                              } else {
+                                setCallForm({ ...callForm, caller: usr.name });
+                              }
+                              setOpenDropdownField(null);
+                            }}
+                            className={`w-full text-left px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer ${
+                              (callForm.type === 'Incoming' ? callForm.receiver : callForm.caller) === usr.name ? 'bg-[#2C2C2E] text-white font-semibold' : 'hover:bg-[#2C2C2E]/60 text-[#D4D4D8]'
+                            }`}
+                          >
+                            {usr.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1618,6 +1748,137 @@ const CallLogsPage = () => {
               >
                 Create
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* CALL DETAILS MODAL (Matching Screenshot 100%!) */}
+      {selectedCallDetail && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="bg-[#1C1C1E] border border-[#2C2C2E] rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl relative text-xs text-[#E4E4E7]">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white tracking-tight">Call Details</h2>
+              <div className="flex items-center gap-3 text-[#A1A1AA]">
+                <button type="button" className="hover:text-white transition-colors cursor-pointer" title="Options">
+                  <EllipsisHorizontalIcon className="w-5 h-5" />
+                </button>
+                <button type="button" className="hover:text-white transition-colors cursor-pointer" title="Edit">
+                  <PencilSquareIcon className="w-4.5 h-4.5" />
+                </button>
+                <button type="button" onClick={() => setSelectedCallDetail(null)} className="hover:text-white transition-colors cursor-pointer" title="Close">
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Detail List Items */}
+            <div className="space-y-4 pt-1">
+              {/* Item 1: Call Type */}
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 flex items-center justify-center text-[#A1A1AA]">
+                  {selectedCallDetail.type === 'Outgoing' ? (
+                    <PhoneArrowUpRightIcon className="w-4 h-4 text-sky-400" />
+                  ) : (
+                    <PhoneArrowDownLeftIcon className="w-4 h-4 text-emerald-400" />
+                  )}
+                </div>
+                <span className="font-semibold text-white text-sm">
+                  {selectedCallDetail.type} Call
+                </span>
+              </div>
+
+              {/* Item 2: Caller -> Receiver */}
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 flex items-center justify-center text-[#A1A1AA]">
+                  <UserIcon className="w-4 h-4" />
+                </div>
+                <div className="flex items-center gap-2 font-medium text-white text-xs">
+                  <span className="w-4.5 h-4.5 rounded-full bg-[#27272A] text-[#A1A1AA] text-[9px] font-bold flex items-center justify-center shrink-0">
+                    {selectedCallDetail.callerInitial || 'U'}
+                  </span>
+                  <span>{selectedCallDetail.caller || 'Unknown'}</span>
+                  <span className="text-[#71717A]">→</span>
+                  <span className="w-4.5 h-4.5 rounded-full bg-[#27272A] text-[#A1A1AA] text-[9px] font-bold flex items-center justify-center shrink-0">
+                    {selectedCallDetail.receiverInitial || 'Y'}
+                  </span>
+                  <span>{selectedCallDetail.receiver || 'Yusif Hashimov'}</span>
+                </div>
+              </div>
+
+              {/* Item 3: Linked Entity (Lead / Contact / Deal) */}
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 flex items-center justify-center text-[#A1A1AA]">
+                  <UserGroupIcon className="w-4 h-4" />
+                </div>
+                {selectedCallDetail.leadId ? (
+                  <Link
+                    to={`/crm/leads/${selectedCallDetail.leadId}`}
+                    onClick={() => setSelectedCallDetail(null)}
+                    className="flex items-center gap-1 font-semibold text-white text-xs hover:text-sky-400 cursor-pointer"
+                  >
+                    <span>Lead</span>
+                    <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5 text-[#71717A]" />
+                  </Link>
+                ) : selectedCallDetail.contactId ? (
+                  <Link
+                    to={`/crm/contacts/${selectedCallDetail.contactId}`}
+                    onClick={() => setSelectedCallDetail(null)}
+                    className="flex items-center gap-1 font-semibold text-white text-xs hover:text-sky-400 cursor-pointer"
+                  >
+                    <span>Contact</span>
+                    <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5 text-[#71717A]" />
+                  </Link>
+                ) : selectedCallDetail.dealId ? (
+                  <Link
+                    to={`/crm/deals/${selectedCallDetail.dealId}`}
+                    onClick={() => setSelectedCallDetail(null)}
+                    className="flex items-center gap-1 font-semibold text-white text-xs hover:text-sky-400 cursor-pointer"
+                  >
+                    <span>Deal</span>
+                    <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5 text-[#71717A]" />
+                  </Link>
+                ) : (
+                  <Link
+                    to="/crm/leads"
+                    onClick={() => setSelectedCallDetail(null)}
+                    className="flex items-center gap-1 font-semibold text-white text-xs hover:text-sky-400 cursor-pointer"
+                  >
+                    <span>{selectedCallDetail.entityType || 'Lead'}</span>
+                    <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5 text-[#71717A]" />
+                  </Link>
+                )}
+              </div>
+
+              {/* Item 4: Date & Time */}
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 flex items-center justify-center text-[#A1A1AA]">
+                  <CalendarIcon className="w-4 h-4" />
+                </div>
+                <span className="font-medium text-[#D4D4D8]">
+                  {selectedCallDetail.formattedDate || selectedCallDetail.createdOn || 'Wed, Jul 15, 2026 1:27 am'}
+                </span>
+              </div>
+
+              {/* Item 5: Duration */}
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 flex items-center justify-center text-[#A1A1AA]">
+                  <ClockIcon className="w-4 h-4" />
+                </div>
+                <span className="font-medium text-[#D4D4D8]">
+                  {selectedCallDetail.duration || '3s'}
+                </span>
+              </div>
+
+              {/* Item 6: Status */}
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 flex items-center justify-center text-[#A1A1AA]">
+                  <CheckCircleIcon className="w-4 h-4 text-sky-400" />
+                </div>
+                <span className="font-semibold text-sky-400">
+                  {selectedCallDetail.status || 'In Progress'}
+                </span>
+              </div>
             </div>
           </div>
         </div>

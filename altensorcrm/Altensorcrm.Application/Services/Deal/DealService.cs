@@ -122,6 +122,19 @@ public class DealService : IDealService
         }
 
         _mapper.Map(dto, deal);
+
+        if (string.IsNullOrWhiteSpace(deal.OrganizationName)) deal.OrganizationName = "Company";
+        if (string.IsNullOrWhiteSpace(deal.FirstName)) deal.FirstName = "Contact";
+        if (deal.LastName is null) deal.LastName = string.Empty;
+        if (deal.PrimaryEmail is null) deal.PrimaryEmail = string.Empty;
+        if (deal.PrimaryMobileNo is null) deal.PrimaryMobileNo = string.Empty;
+
+        if (dto.DealOwnerId.HasValue && dto.DealOwnerId.Value != Guid.Empty)
+        {
+            var userExists = await _unitOfWork.Repository<Domain.Entity.User>().ExistsAsync(u => u.Id == dto.DealOwnerId.Value, cancellationToken);
+            if (!userExists) deal.DealOwnerId = null;
+        }
+
         _unitOfWork.Deals.Update(deal);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

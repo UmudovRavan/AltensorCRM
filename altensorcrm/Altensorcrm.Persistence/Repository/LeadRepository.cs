@@ -46,6 +46,10 @@ public class LeadRepository(AppDbContext context) : GenericRepository<Lead>(cont
         {
             query = query.Where(l => l.Status == status.Value);
         }
+        else
+        {
+            query = query.Where(l => l.Status != LeadStatus.Converted && l.Status != LeadStatus.ConvertToDeal);
+        }
 
         if (ownerId.HasValue)
         {
