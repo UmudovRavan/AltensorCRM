@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Altensorcrm.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+78efd74e30d8ede6c00c87568563d4bcd417f829")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b2a7840c39c6acca1885ab996db878077777b476")]
 [assembly: System.Reflection.AssemblyProductAttribute("Altensorcrm.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Altensorcrm.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

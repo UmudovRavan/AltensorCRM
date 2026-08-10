@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../../context/ThemeContext';
 import {
   UserIcon,
   AdjustmentsHorizontalIcon,
@@ -134,7 +135,7 @@ const SettingsPage = () => {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   // PREFERENCES STATE
-  const [selectedTheme, setSelectedTheme] = useState('system');
+  const { theme, setTheme } = useTheme();
   const [selectedLanguage, setSelectedLanguage] = useState('');
   const [selectedTimezone, setSelectedTimezone] = useState('Asia/Baku');
 
@@ -268,18 +269,20 @@ const SettingsPage = () => {
                       <button
                         key={item.id}
                         onClick={() => setActiveTab(item.id)}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs w-full text-left transition-colors cursor-pointer ${
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs w-full text-left transition-all cursor-pointer ${
                           isActive
-                            ? 'bg-[#2C2C2E] text-white font-semibold shadow-xs'
-                            : 'text-[#A1A1AA] hover:bg-[#1C1C1E] hover:text-white font-normal'
+                            ? 'bg-slate-700/80 dark:bg-slate-700/80 text-white font-semibold shadow-xs border border-slate-600/50'
+                            : 'bg-transparent text-[#A1A1AA] dark:text-[#94A3B8] hover:bg-white/[0.05] dark:hover:bg-slate-800/40 hover:text-white font-normal'
                         }`}
                       >
                         {item.id === 'profile' ? (
-                          <span className="w-4 h-4 rounded-full bg-[#27272A] text-[#A1A1AA] text-[10px] font-bold flex items-center justify-center shrink-0">
+                          <span className={`w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${
+                            isActive ? 'bg-white text-black' : 'bg-slate-700 text-[#94A3B8]'
+                          }`}>
                             {userProfile.initial}
                           </span>
                         ) : (
-                          <Icon className="w-4 h-4 text-[#71717A] shrink-0" />
+                          <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-[#71717A] dark:text-[#94A3B8]'}`} />
                         )}
                         <span className="truncate">{item.label}</span>
                       </button>
@@ -393,13 +396,14 @@ const SettingsPage = () => {
 
                 <div className="space-y-2">
                   <h3 className="text-xs font-semibold text-white">Theme</h3>
-                  <p className="text-xs text-[#71717A]">Switch between light, dark, or system theme</p>
+                  <p className="text-xs text-[#71717A]">Switch between light, dark, and midnight theme</p>
 
                   <div className="grid grid-cols-3 gap-3 pt-2">
+                    {/* Light Theme Card */}
                     <div
-                      onClick={() => setSelectedTheme('light')}
+                      onClick={() => setTheme('light')}
                       className={`bg-[#141416] rounded-2xl p-3 border transition-all cursor-pointer relative flex flex-col justify-between h-28 ${
-                        selectedTheme === 'light' ? 'border-white bg-[#1C1C1E]' : 'border-[#2C2C2E] hover:border-[#3F3F46]'
+                        theme === 'light' ? 'border-white bg-[#1C1C1E]' : 'border-[#2C2C2E] hover:border-[#3F3F46]'
                       }`}
                     >
                       <div className="bg-white rounded-lg p-2 h-14 border border-zinc-200 flex flex-col justify-between overflow-hidden">
@@ -415,16 +419,17 @@ const SettingsPage = () => {
                       </div>
                       <div className="flex items-center justify-between pt-2">
                         <span className="text-xs text-[#D4D4D8] font-medium">Light</span>
-                        <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${selectedTheme === 'light' ? 'border-white bg-white' : 'border-[#52525B]'}`}>
-                          {selectedTheme === 'light' && <div className="w-1.5 h-1.5 rounded-full bg-black"></div>}
+                        <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${theme === 'light' ? 'border-white bg-white' : 'border-[#52525B]'}`}>
+                          {theme === 'light' && <div className="w-1.5 h-1.5 rounded-full bg-black"></div>}
                         </div>
                       </div>
                     </div>
 
+                    {/* Dark Theme Card (Classic Charcoal) */}
                     <div
-                      onClick={() => setSelectedTheme('dark')}
+                      onClick={() => setTheme('dark')}
                       className={`bg-[#141416] rounded-2xl p-3 border transition-all cursor-pointer relative flex flex-col justify-between h-28 ${
-                        selectedTheme === 'dark' ? 'border-white bg-[#1C1C1E]' : 'border-[#2C2C2E] hover:border-[#3F3F46]'
+                        theme === 'dark' ? 'border-white bg-[#1C1C1E]' : 'border-[#2C2C2E] hover:border-[#3F3F46]'
                       }`}
                     >
                       <div className="bg-[#18181B] rounded-lg p-2 h-14 border border-[#27272A] flex flex-col justify-between overflow-hidden">
@@ -440,37 +445,34 @@ const SettingsPage = () => {
                       </div>
                       <div className="flex items-center justify-between pt-2">
                         <span className="text-xs text-[#D4D4D8] font-medium">Dark</span>
-                        <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${selectedTheme === 'dark' ? 'border-white bg-white' : 'border-[#52525B]'}`}>
-                          {selectedTheme === 'dark' && <div className="w-1.5 h-1.5 rounded-full bg-black"></div>}
+                        <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${theme === 'dark' ? 'border-white bg-white' : 'border-[#52525B]'}`}>
+                          {theme === 'dark' && <div className="w-1.5 h-1.5 rounded-full bg-black"></div>}
                         </div>
                       </div>
                     </div>
 
+                    {/* Midnight Theme Card (Midnight Blue Slate) */}
                     <div
-                      onClick={() => setSelectedTheme('system')}
+                      onClick={() => setTheme('midnight')}
                       className={`bg-[#141416] rounded-2xl p-3 border transition-all cursor-pointer relative flex flex-col justify-between h-28 ${
-                        selectedTheme === 'system' ? 'border-white bg-[#1C1C1E]' : 'border-[#2C2C2E] hover:border-[#3F3F46]'
+                        theme === 'midnight' ? 'border-white bg-[#1C1C1E]' : 'border-[#2C2C2E] hover:border-[#3F3F46]'
                       }`}
                     >
-                      <div className="rounded-lg h-14 border border-[#2C2C2E] flex overflow-hidden">
-                        <div className="w-1/2 bg-white p-1.5 flex flex-col justify-between">
-                          <div className="flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                          </div>
-                          <span className="text-[8px] font-bold text-zinc-900">CRM</span>
+                      <div className="bg-[#0F172A] rounded-lg p-2 h-14 border border-[#334155] flex flex-col justify-between overflow-hidden">
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                          <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                         </div>
-                        <div className="w-1/2 bg-[#18181B] p-1.5 flex flex-col justify-between border-l border-[#2C2C2E]">
-                          <div className="flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                          </div>
-                          <span className="text-[8px] font-bold text-white">CRM</span>
+                        <div className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded bg-fuchsia-600 text-[6px] text-white flex items-center justify-center font-bold">▼</span>
+                          <span className="text-[9px] font-bold text-[#F8FAFC]">CRM</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between pt-2">
-                        <span className="text-xs text-white font-semibold">System</span>
-                        <div className="w-3.5 h-3.5 rounded-full border border-white bg-white flex items-center justify-center">
-                          <div className="w-1.5 h-1.5 rounded-full bg-black"></div>
+                        <span className="text-xs text-[#D4D4D8] font-medium">Midnight</span>
+                        <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${theme === 'midnight' ? 'border-white bg-white' : 'border-[#52525B]'}`}>
+                          {theme === 'midnight' && <div className="w-1.5 h-1.5 rounded-full bg-black"></div>}
                         </div>
                       </div>
                     </div>

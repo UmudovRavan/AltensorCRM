@@ -137,4 +137,16 @@ public class OrganizationService : IOrganizationService
         var result = await _unitOfWork.SaveChangesAsync(cancellationToken);
         return result > 0;
     }
+
+    public async Task<IReadOnlyList<Altensorcrm.Contract.DTOs.Contact.ContactListDto>> GetContactsByOrganizationIdAsync(Guid organizationId, CancellationToken cancellationToken = default)
+    {
+        var contacts = await _unitOfWork.Repository<Altensorcrm.Domain.Entity.Contact>().FindAsync(c     => c.OrganizationId == organizationId, cancellationToken);
+        return _mapper.Map<IReadOnlyList<Altensorcrm.Contract.DTOs.Contact.ContactListDto>>(contacts.ToList());
+    }
+
+    public async Task<IReadOnlyList<Altensorcrm.Contract.DTOs.Deal.DealListDto>> GetDealsByOrganizationIdAsync(Guid organizationId, CancellationToken cancellationToken = default)
+    {
+        var deals = await _unitOfWork.Repository<Altensorcrm.Domain.Entity.Deal>().FindAsync(d => d.OrganizationId == organizationId, cancellationToken);
+        return _mapper.Map<IReadOnlyList<Altensorcrm.Contract.DTOs.Deal.DealListDto>>(deals.ToList());
+    }
 }

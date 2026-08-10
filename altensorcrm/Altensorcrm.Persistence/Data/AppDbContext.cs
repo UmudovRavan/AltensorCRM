@@ -23,6 +23,8 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<DealProduct> DealProducts => Set<DealProduct>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

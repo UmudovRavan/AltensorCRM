@@ -54,6 +54,19 @@ public record EmployeeMetricDto(
     decimal TotalRevenue
 );
 
+public record MonthlyRevenueDataDto(
+    string Month,
+    decimal Revenue,
+    int DealCount
+);
+
+public record ConversionStatsDto(
+    double ConversionRatePercent,
+    decimal TargetAmount,
+    decimal AchievedAmount,
+    double TargetProgressPercent
+);
+
 public record DashboardStatsDto(
     int TotalLeads,
     double AverageTimeToCloseDays,
@@ -61,5 +74,7 @@ public record DashboardStatsDto(
     int WonDealsCount,
     decimal TotalRevenueGenerated,
     Dictionary<string, int> LostDealsByReason,
-    List<EmployeeMetricDto> PerEmployeeMetrics
+    List<EmployeeMetricDto> PerEmployeeMetrics,
+    List<MonthlyRevenueDataDto>? MonthlyRevenue = null,
+    ConversionStatsDto? ConversionStats = null
 );

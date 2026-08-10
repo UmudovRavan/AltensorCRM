@@ -47,6 +47,7 @@ namespace Altensorcrm.Application.Extentions
             services.AddScoped<ILayoutService, LayoutService>();
             services.AddScoped<ICustomViewService, CustomViewService>();
             services.AddScoped<ISettingService, SettingService>();
+            services.AddScoped<Altensorcrm.Contract.Services.Product.IProductService, Altensorcrm.Application.Services.Product.ProductService>();
 
             return services;
         }

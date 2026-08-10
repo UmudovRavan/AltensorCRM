@@ -127,5 +127,11 @@ public class CustomProfile : Profile
         CreateMap<CreateDealDto, Deal>();
         CreateMap<UpdateDealDto, Deal>()
             .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+
+        // Product Mappings
+        CreateMap<Domain.Entity.Product, Contract.DTOs.Product.ProductDetailDto>().ReverseMap();
+        CreateMap<Contract.DTOs.Product.CreateProductDto, Domain.Entity.Product>();
+        CreateMap<Contract.DTOs.Product.UpdateProductDto, Domain.Entity.Product>()
+            .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
     }
 }

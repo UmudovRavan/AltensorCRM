@@ -398,6 +398,40 @@ namespace Altensorcrm.Persistence.Migrations
                     b.ToTable("Deals", (string)null);
                 });
 
+            modelBuilder.Entity("Altensorcrm.Domain.Entity.DealProduct", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DealId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Rate")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DealId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("DealProducts");
+                });
+
             modelBuilder.Entity("Altensorcrm.Domain.Entity.Lead", b =>
                 {
                     b.Property<Guid>("Id")
@@ -616,6 +650,44 @@ namespace Altensorcrm.Persistence.Migrations
                     b.HasIndex("TerritoryId");
 
                     b.ToTable("Organizations", (string)null);
+                });
+
+            modelBuilder.Entity("Altensorcrm.Domain.Entity.Product", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Disabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NamingSeries")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProductCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("StandardSellingRate")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("Altensorcrm.Domain.Entity.TaskChecklist", b =>
@@ -1141,6 +1213,23 @@ namespace Altensorcrm.Persistence.Migrations
                     b.Navigation("Territory");
                 });
 
+            modelBuilder.Entity("Altensorcrm.Domain.Entity.DealProduct", b =>
+                {
+                    b.HasOne("Altensorcrm.Domain.Entity.Deal", "Deal")
+                        .WithMany("Products")
+                        .HasForeignKey("DealId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Altensorcrm.Domain.Entity.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId");
+
+                    b.Navigation("Deal");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("Altensorcrm.Domain.Entity.Lead", b =>
                 {
                     b.HasOne("Altensorcrm.Domain.Entity.User", "LeadOwner")
@@ -1358,6 +1447,8 @@ namespace Altensorcrm.Persistence.Migrations
                     b.Navigation("Notes");
 
                     b.Navigation("Notifications");
+
+                    b.Navigation("Products");
 
                     b.Navigation("Tasks");
                 });

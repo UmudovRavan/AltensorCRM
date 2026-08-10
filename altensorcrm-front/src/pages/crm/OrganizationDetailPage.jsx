@@ -105,12 +105,18 @@ const OrganizationDetailPage = () => {
 
   const fetchRealDeals = async (orgId, orgName) => {
     try {
-      const allDeals = await dealsApi.getAll();
-      const rawList = Array.isArray(allDeals) ? allDeals : allDeals?.items || [];
-      
+      let rawList = [];
+      try {
+        rawList = await orgsApi.getDeals(orgId);
+      } catch {
+        const allDeals = await dealsApi.getAll();
+        rawList = Array.isArray(allDeals) ? allDeals : allDeals?.items || [];
+      }
+
+      const list = Array.isArray(rawList) ? rawList : rawList?.items || [];
       const orgNameToMatch = (orgName || '').toLowerCase().trim();
 
-      const matched = rawList.filter(d => {
+      const matched = list.filter(d => {
         if (!d) return false;
         if (d.organizationId && String(d.organizationId).toLowerCase() === String(orgId).toLowerCase()) return true;
         if (orgNameToMatch && d.organizationName && String(d.organizationName).toLowerCase().trim() === orgNameToMatch) return true;
@@ -136,12 +142,18 @@ const OrganizationDetailPage = () => {
 
   const fetchRealContacts = async (orgId, orgName) => {
     try {
-      const allContacts = await contactsApi.getAll();
-      const rawList = Array.isArray(allContacts) ? allContacts : allContacts?.items || [];
+      let rawList = [];
+      try {
+        rawList = await orgsApi.getContacts(orgId);
+      } catch {
+        const allContacts = await contactsApi.getAll();
+        rawList = Array.isArray(allContacts) ? allContacts : allContacts?.items || [];
+      }
 
+      const list = Array.isArray(rawList) ? rawList : rawList?.items || [];
       const orgNameToMatch = (orgName || '').toLowerCase().trim();
 
-      const matched = rawList.filter(c => {
+      const matched = list.filter(c => {
         if (!c) return false;
         if (c.organizationId && String(c.organizationId).toLowerCase() === String(orgId).toLowerCase()) return true;
         if (orgNameToMatch && c.companyName && String(c.companyName).toLowerCase().trim() === orgNameToMatch) return true;
@@ -443,11 +455,10 @@ const OrganizationDetailPage = () => {
           <div className="border-b border-[#2C2C2E]/60 flex items-center gap-6 text-xs text-[#A1A1AA]">
             <button
               onClick={() => setActiveTab('Deals')}
-              className={`flex items-center gap-2 pb-3 font-bold transition-colors border-b-2 cursor-pointer ${
-                activeTab === 'Deals'
-                  ? 'border-sky-500 text-white font-semibold'
-                  : 'border-transparent hover:text-white'
-              }`}
+              className={`flex items-center gap-2 pb-3 font-bold transition-colors border-b-2 cursor-pointer ${activeTab === 'Deals'
+                ? 'border-sky-500 text-white font-semibold'
+                : 'border-transparent hover:text-white'
+                }`}
             >
               <BoltIcon className="w-4 h-4 text-sky-400" />
               <span>Deals</span>
@@ -458,11 +469,10 @@ const OrganizationDetailPage = () => {
 
             <button
               onClick={() => setActiveTab('Contacts')}
-              className={`flex items-center gap-2 pb-3 font-bold transition-colors border-b-2 cursor-pointer ${
-                activeTab === 'Contacts'
-                  ? 'border-sky-500 text-white font-semibold'
-                  : 'border-transparent hover:text-white'
-              }`}
+              className={`flex items-center gap-2 pb-3 font-bold transition-colors border-b-2 cursor-pointer ${activeTab === 'Contacts'
+                ? 'border-sky-500 text-white font-semibold'
+                : 'border-transparent hover:text-white'
+                }`}
             >
               <UserIcon className="w-4 h-4 text-sky-400" />
               <span>Contacts</span>

@@ -1228,7 +1228,7 @@ const DealsPage = () => {
                         </Link>
                       </div>
 
-                      <div className="text-sm font-extrabold text-sky-400">{deal.annualRevenue}</div>
+                      <div className="text-sm font-extrabold text-black dark:text-sky-400">{deal.annualRevenue}</div>
 
                       <div className="text-[#A1A1AA] space-y-1">
                         <p className="truncate">{deal.email}</p>
@@ -1375,17 +1375,17 @@ const DealsPage = () => {
             </div>
           )}
 
-          <div className="bg-[#1C1C1E] border border-[#2C2C2E] rounded-2xl shadow-2xl px-4 py-2 flex items-center gap-3.5 text-xs font-medium text-white">
+          <div className="bg-white dark:bg-[#1C1C1E] border border-[#E2E8F0] dark:border-[#2C2C2E] rounded-2xl shadow-2xl px-4 py-2 flex items-center gap-3.5 text-xs font-medium text-[#0F172A] dark:text-white">
             <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded bg-sky-500 text-white flex items-center justify-center text-[10px] font-bold">✓</span>
+              <span className="w-4 h-4 rounded-md bg-white border border-[#D1D5DB] text-black flex items-center justify-center text-[11px] font-extrabold shrink-0 check-badge shadow-xs">✓</span>
               <span className="font-semibold">{selectedRows.length} row{selectedRows.length > 1 ? 's' : ''} selected</span>
             </div>
-            <button onClick={() => setIsFloatingActionsOpen(!isFloatingActionsOpen)} className="p-1 rounded-lg hover:bg-[#2C2C2E] text-[#A1A1AA] hover:text-white transition-colors cursor-pointer">
+            <button onClick={() => setIsFloatingActionsOpen(!isFloatingActionsOpen)} className="p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-[#2C2C2E] text-[#64748B] dark:text-[#A1A1AA] hover:text-[#0F172A] dark:hover:text-white transition-colors cursor-pointer">
               <EllipsisHorizontalIcon className="w-5 h-5" />
             </button>
-            <div className="w-px h-4 bg-[#2C2C2E]"></div>
-            <button onClick={handleSelectAllBtn} className="text-[#D4D4D8] hover:text-white transition-colors cursor-pointer font-medium">Select all</button>
-            <button onClick={handleDeselectAll} className="text-[#71717A] hover:text-white transition-colors cursor-pointer p-0.5"><XMarkIcon className="w-4 h-4" /></button>
+            <div className="w-px h-4 bg-[#E2E8F0] dark:bg-[#2C2C2E]"></div>
+            <button onClick={handleSelectAllBtn} className="text-[#334155] dark:text-[#D4D4D8] hover:text-[#0F172A] dark:hover:text-white transition-colors cursor-pointer font-medium">Select all</button>
+            <button onClick={handleDeselectAll} className="text-[#64748B] dark:text-[#71717A] hover:text-[#0F172A] dark:hover:text-white transition-colors cursor-pointer p-0.5"><XMarkIcon className="w-4 h-4" /></button>
           </div>
         </div>
       )}
@@ -1416,27 +1416,29 @@ const DealsPage = () => {
             <div className="flex flex-wrap items-center gap-6 text-xs text-[#A1A1AA] pb-1">
               {/* Choose Existing Organization Switch */}
               <div className="flex items-center gap-2.5">
-                <span>Choose Existing Organization</span>
+                <span className="font-medium text-[#71717A] dark:text-[#A1A1AA]">Choose Existing Organization</span>
                 <button
                   type="button"
                   onClick={() => setChooseExistingOrg(!chooseExistingOrg)}
-                  className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer flex items-center ${chooseExistingOrg ? 'bg-white justify-end' : 'bg-[#3F3F46] justify-start'
-                    }`}
+                  className={`w-10 h-5 rounded-full p-0.5 transition-colors cursor-pointer flex items-center ${
+                    chooseExistingOrg ? 'bg-black dark:bg-white justify-end' : 'bg-zinc-200 dark:bg-zinc-700 justify-start'
+                  }`}
                 >
-                  <span className={`w-4 h-4 rounded-full shadow-md ${chooseExistingOrg ? 'bg-black' : 'bg-[#A1A1AA]'}`}></span>
+                  <span className={`w-4 h-4 rounded-full shadow-md ${chooseExistingOrg ? 'bg-white dark:bg-black' : 'bg-white dark:bg-zinc-400'}`}></span>
                 </button>
               </div>
 
               {/* Choose Existing Contact Switch */}
               <div className="flex items-center gap-2.5">
-                <span>Choose Existing Contact</span>
+                <span className="font-medium text-[#71717A] dark:text-[#A1A1AA]">Choose Existing Contact</span>
                 <button
                   type="button"
                   onClick={() => setChooseExistingContact(!chooseExistingContact)}
-                  className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer flex items-center ${chooseExistingContact ? 'bg-white justify-end' : 'bg-[#3F3F46] justify-start'
-                    }`}
+                  className={`w-10 h-5 rounded-full p-0.5 transition-colors cursor-pointer flex items-center ${
+                    chooseExistingContact ? 'bg-black dark:bg-white justify-end' : 'bg-zinc-200 dark:bg-zinc-700 justify-start'
+                  }`}
                 >
-                  <span className={`w-4 h-4 rounded-full shadow-md ${chooseExistingContact ? 'bg-black' : 'bg-[#A1A1AA]'}`}></span>
+                  <span className={`w-4 h-4 rounded-full shadow-md ${chooseExistingContact ? 'bg-white dark:bg-black' : 'bg-white dark:bg-zinc-400'}`}></span>
                 </button>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { leadsApi, dealsApi, contactsApi, orgsApi } from '../../services/api';
+import { leadsApi, dealsApi, contactsApi, orgsApi, dashboardApi } from '../../services/api';
 import {
   ArrowPathIcon,
   PencilIcon,
@@ -38,30 +38,30 @@ const salesUsers = [
 ];
 
 const stageColorPalette = {
-  'Qualification': '#71717A',
-  'Demo/Making': '#F97316',
-  'Demo': '#F97316',
-  'Proposal/Quotation': '#38BDF8',
-  'Proposal': '#38BDF8',
-  'Negotiation': '#EAB308',
-  'Ready to Close': '#A855F7',
-  'Won': '#10B981',
-  'Lost': '#EF4444'
+  'Qualification': '#64748B',
+  'Demo/Making': '#60A5FA',
+  'Demo': '#60A5FA',
+  'Proposal/Quotation': '#FBBF24',
+  'Proposal': '#FBBF24',
+  'Negotiation': '#FBBF24',
+  'Ready to Close': '#A78BFA',
+  'Won': '#34D399',
+  'Lost': '#F87171'
 };
 
-// Custom Translucent Tooltip
+// Custom Clean Translucent Tooltip (Light & Midnight Blue Dark Compatible)
 const AppleStocksTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[#1C1C1E]/95 backdrop-blur-md border border-[#3F3F46] rounded-2xl p-3 shadow-2xl text-xs space-y-1.5 min-w-[140px] z-50">
-        {label && <p className="text-[#A1A1AA] font-medium border-b border-[#2C2C2E] pb-1">{label}</p>}
+      <div className="bg-white dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] rounded-xl p-3 shadow-xl text-xs space-y-1.5 min-w-[140px] z-50 animate-in fade-in duration-150">
+        {label && <p className="text-[#6B7280] dark:text-[#94A3B8] font-semibold border-b border-[#F3F4F6] dark:border-[#334155] pb-1">{label}</p>}
         {payload.map((item, index) => (
           <div key={index} className="flex items-center justify-between gap-3 text-xs">
             <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color || item.payload?.color || '#38BDF8' }}></span>
-              <span className="text-[#D4D4D8]">{item.name}</span>
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color || item.payload?.color || '#60A5FA' }}></span>
+              <span className="text-[#374151] dark:text-[#CBD5E1] font-medium">{item.name}</span>
             </span>
-            <span className="font-bold text-white">{item.value}</span>
+            <span className="font-bold text-[#111827] dark:text-[#F8FAFC]">{item.value}</span>
           </div>
         ))}
       </div>
@@ -70,35 +70,44 @@ const AppleStocksTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-// Apple Donut Chart Component with clean spacing (No Collisions!)
+// Premium Donut Chart Component (inner/outer: 70/100, 2px padding, 4px hover expand, 200ms ease, Midnight Blue tokens)
 const AppleDonutChart = ({ data = [] }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const chartData = data.length > 0 ? data : [{ name: 'No Data', value: 100, color: '#3F3F46' }];
+  const chartData = data.length > 0 ? data : [{ name: 'No Data', value: 100, color: '#64748B' }];
   const activeItem = chartData[activeIndex] || chartData[0];
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between h-full w-full gap-4 pt-1">
-      <div className="relative w-36 h-36 shrink-0 flex items-center justify-center">
+    <div className="flex flex-col sm:flex-row items-center justify-between h-full w-full gap-5 pt-1">
+      <div className="relative w-40 h-40 shrink-0 flex items-center justify-center">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart style={{ backgroundColor: 'transparent' }}>
             <Pie
               data={chartData}
               cx="50%"
               cy="50%"
-              innerRadius={44}
-              outerRadius={64}
-              paddingAngle={4}
+              innerRadius={48}
+              outerRadius={68}
+              paddingAngle={2}
               dataKey="value"
               onMouseEnter={(_, index) => setActiveIndex(index)}
               cursor="pointer"
+              isAnimationActive={true}
+              animationDuration={800}
+              animationEasing="ease-out"
             >
               {chartData.map((entry, idx) => (
                 <Cell
                   key={`cell-${idx}`}
                   fill={entry.color}
-                  stroke="#1C1C1E"
-                  strokeWidth={3}
-                  className="transition-all duration-200 hover:opacity-90"
+                  stroke="#FFFFFF"
+                  strokeWidth={2}
+                  className="dark:stroke-[#0F172A] stroke-white"
+                  style={{
+                    transition: 'all 200ms ease-out',
+                    transform: activeIndex === idx ? 'scale(1.05)' : 'scale(1)',
+                    transformOrigin: 'center center',
+                    filter: activeIndex === idx ? 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25))' : 'none'
+                  }}
                 />
               ))}
             </Pie>
@@ -106,26 +115,36 @@ const AppleDonutChart = ({ data = [] }) => {
           </PieChart>
         </ResponsiveContainer>
 
+        {/* Center Overlay: 24px/700 percentage (#F8FAFC) + 13px status title (#94A3B8) */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-1">
-          <span className="text-base font-black text-white tracking-tight leading-none">{activeItem.value}{activeItem.name === 'No Data' ? '' : '%'}</span>
-          <span className="text-[10px] font-medium text-[#A1A1AA] truncate max-w-[65px] mt-0.5">{activeItem.name}</span>
+          <span className="text-2xl font-bold text-[#111827] dark:text-[#F8FAFC] tracking-tight leading-none">
+            {activeItem.value}{activeItem.name === 'No Data' ? '' : '%'}
+          </span>
+          <span className="text-xs font-normal text-[#6B7280] dark:text-[#94A3B8] truncate max-w-[85px] mt-1">
+            {activeItem.name}
+          </span>
         </div>
       </div>
 
-      <div className="flex-1 w-full space-y-1.5 text-xs max-h-36 overflow-y-auto custom-scrollbar pr-1">
+      {/* Right Side Legend List (12px row spacing, hover #293548 in Dark Mode) */}
+      <div className="flex-1 w-full space-y-3 text-xs max-h-40 overflow-y-auto custom-scrollbar pr-1">
         {chartData.map((item, idx) => (
           <div
             key={item.name}
             onMouseEnter={() => setActiveIndex(idx)}
-            className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl transition-all cursor-pointer ${
-              activeIndex === idx ? 'bg-[#2C2C2E] border border-[#3F3F46] shadow-sm' : 'hover:bg-[#2C2C2E]/40 border border-transparent'
+            className={`flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-200 cursor-pointer ${
+              activeIndex === idx
+                ? 'bg-[#F9FAFB] dark:bg-[#293548] border border-[#E5E7EB] dark:border-[#334155] shadow-xs'
+                : 'hover:bg-[#F9FAFB] dark:hover:bg-[#293548] border border-transparent'
             }`}
           >
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2.5 min-w-0">
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }}></span>
-              <span className="text-[#D4D4D8] font-medium truncate">{item.name}</span>
+              <span className="text-[#111827] dark:text-[#F8FAFC] font-medium truncate">{item.name}</span>
             </div>
-            <span className="font-bold text-white shrink-0 ml-2">{item.value}{item.name === 'No Data' ? '' : '%'}</span>
+            <span className="font-bold text-[#111827] dark:text-[#F8FAFC] shrink-0 ml-2">
+              {item.value}{item.name === 'No Data' ? '' : '%'}
+            </span>
           </div>
         ))}
       </div>
@@ -236,11 +255,12 @@ const CrmDashboardPage = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [leadsRes, dealsRes, contactsRes, orgsRes] = await Promise.all([
+      const [leadsRes, dealsRes, contactsRes, orgsRes, dbStatsRes] = await Promise.all([
         leadsApi.getAll().catch(() => []),
         dealsApi.getAll().catch(() => []),
         contactsApi.getAll().catch(() => []),
-        orgsApi.getAll().catch(() => [])
+        orgsApi.getAll().catch(() => []),
+        dashboardApi.getStats().catch(() => null)
       ]);
 
       const leadsList = Array.isArray(leadsRes) ? leadsRes : leadsRes?.items || [];
@@ -326,12 +346,13 @@ const CrmDashboardPage = () => {
       });
 
       const leadStatusColors = {
-        'New': '#38BDF8',
-        'Contacted': '#EAB308',
-        'Connected': '#EAB308',
-        'Qualified': '#10B981',
-        'Converted': '#A855F7',
-        'Lost': '#EF4444'
+        'New': '#60A5FA',
+        'Contacted': '#FBBF24',
+        'Connected': '#FBBF24',
+        'Qualified': '#34D399',
+        'Converted': '#A78BFA',
+        'Won': '#34D399',
+        'Lost': '#F87171'
       };
 
       const donutLeadArr = Object.entries(leadStatusMap).map(([st, count]) => ({
@@ -451,16 +472,16 @@ const CrmDashboardPage = () => {
       <svg className="h-0 w-0 absolute" aria-hidden="true" focusable="false">
         <defs>
           <linearGradient id="appleGradientCyan" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#38BDF8" stopOpacity={0.45} />
-            <stop offset="100%" stopColor="#38BDF8" stopOpacity={0.0} />
+            <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.0} />
           </linearGradient>
           <linearGradient id="appleGradientGreen" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#34C759" stopOpacity={0.45} />
-            <stop offset="100%" stopColor="#34C759" stopOpacity={0.0} />
+            <stop offset="0%" stopColor="#22C55E" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="#22C55E" stopOpacity={0.0} />
           </linearGradient>
           <linearGradient id="appleGradientYellow" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FACC15" stopOpacity={0.45} />
-            <stop offset="100%" stopColor="#FACC15" stopOpacity={0.0} />
+            <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.0} />
           </linearGradient>
         </defs>
       </svg>
@@ -725,17 +746,53 @@ const CrmDashboardPage = () => {
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      /* Area Chart with Clean Margins & Generous Padding (No Collisions!) */
-                      <ResponsiveContainer width="100%" height={230}>
-                        <AreaChart data={salesTrendData} margin={{ top: 15, right: 20, left: -15, bottom: 25 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#2C2C2E" vertical={false} />
-                          <XAxis dataKey="name" stroke="#52525B" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#71717A' }} dy={8} />
-                          <YAxis stroke="#52525B" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#71717A' }} />
+                      /* Sales Trend Area Chart (Unified Light & Midnight Blue Dark Theme) */
+                      <ResponsiveContainer width="100%" height={280}>
+                        <AreaChart data={salesTrendData} margin={{ top: 15, right: 20, left: -15, bottom: 20 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#334155" strokeOpacity={0.4} vertical={false} />
+                          <XAxis dataKey="name" stroke="#64748B" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: '#64748B' }} dy={8} />
+                          <YAxis stroke="#64748B" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748B' }} />
                           <Tooltip content={<AppleStocksTooltip />} />
-                          <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} />
-                          <Area type="monotone" dataKey="leads" name="Leads" stroke="#38BDF8" strokeWidth={2.5} fillOpacity={1} fill="url(#appleGradientCyan)" />
-                          <Area type="monotone" dataKey="deals" name="Deals" stroke="#34C759" strokeWidth={2.5} fillOpacity={1} fill="url(#appleGradientGreen)" />
-                          <Area type="monotone" dataKey="wonDeals" name="Won Deals" stroke="#FACC15" strokeWidth={2.5} fillOpacity={1} fill="url(#appleGradientYellow)" />
+                          <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', paddingTop: '15px' }} />
+                          <Area
+                            type="monotone"
+                            dataKey="deals"
+                            name="Deals"
+                            stroke="#34D399"
+                            strokeWidth={2.5}
+                            fillOpacity={1}
+                            fill="url(#appleGradientGreen)"
+                            isAnimationActive={true}
+                            animationDuration={800}
+                            animationEasing="ease-out"
+                            activeDot={{ r: 4, stroke: '#FFFFFF', strokeWidth: 2 }}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="leads"
+                            name="Leads"
+                            stroke="#60A5FA"
+                            strokeWidth={2.5}
+                            fillOpacity={1}
+                            fill="url(#appleGradientCyan)"
+                            isAnimationActive={true}
+                            animationDuration={800}
+                            animationEasing="ease-out"
+                            activeDot={{ r: 4, stroke: '#FFFFFF', strokeWidth: 2 }}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="wonDeals"
+                            name="Won Deals"
+                            stroke="#FBBF24"
+                            strokeWidth={2.5}
+                            fillOpacity={1}
+                            fill="url(#appleGradientYellow)"
+                            isAnimationActive={true}
+                            animationDuration={800}
+                            animationEasing="ease-out"
+                            activeDot={{ r: 4, stroke: '#FFFFFF', strokeWidth: 2 }}
+                          />
                         </AreaChart>
                       </ResponsiveContainer>
                     )}

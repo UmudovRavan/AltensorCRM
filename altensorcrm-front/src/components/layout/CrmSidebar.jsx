@@ -18,8 +18,11 @@ import {
   Cog6ToothIcon,
   InformationCircleIcon,
   ArrowRightOnRectangleIcon,
-  ComputerDesktopIcon
+  ComputerDesktopIcon,
+  SunIcon,
+  MoonIcon
 } from '@heroicons/react/24/outline';
+import { useTheme } from '../../context/ThemeContext';
 import altensorLogo from '../../assets/Altensor-Logo.png';
 
 const menuItems = [
@@ -93,6 +96,7 @@ const CrmSidebar = () => {
   const [isAppsSubmenuOpen, setIsAppsSubmenuOpen] = useState(false);
   const brandMenuRef = useRef(null);
   const navigate = useNavigate();
+  const { theme, setTheme, isDark } = useTheme();
 
   // Close brand dropdown when clicking outside
   useEffect(() => {

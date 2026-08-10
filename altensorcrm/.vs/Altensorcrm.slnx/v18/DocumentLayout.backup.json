@@ -3,15 +3,23 @@
   "WorkspaceRootPath": "C:\\Users\\Ravan999\\Desktop\\Altensor\\altensorcrm\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Program Files\\dotnet\\sdk\\10.0.103\\Sdks\\Microsoft.SourceLink.Common\\build\\Microsoft.SourceLink.Common.targets||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+      "AbsoluteMoniker": "D:0:0:{B470F0CC-B886-FB79-2B12-93E48CB1DB17}|Altensorcrm.Application\\Altensorcrm.Application.csproj|c:\\users\\ravan999\\desktop\\altensor\\altensorcrm\\altensorcrm.application\\services\\organization\\organizationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B470F0CC-B886-FB79-2B12-93E48CB1DB17}|Altensorcrm.Application\\Altensorcrm.Application.csproj|solutionrelative:altensorcrm.application\\services\\organization\\organizationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Ravan999\\Desktop\\Altensor\\altensorcrm\\Altensorcrm.Persistence\\Migrations\\20260810202644_DealProducts.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Altensorcrm.Persistence\\Migrations\\20260810202644_DealProducts.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A7C844D7-D808-8F18-5202-B4F13F3774E0}|Altensorcrm.Contract\\Altensorcrm.Contract.csproj|c:\\users\\ravan999\\desktop\\altensor\\altensorcrm\\altensorcrm.contract\\services\\lead\\ileadservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{A7C844D7-D808-8F18-5202-B4F13F3774E0}|Altensorcrm.Contract\\Altensorcrm.Contract.csproj|solutionrelative:altensorcrm.contract\\services\\lead\\ileadservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Ravan999\\Desktop\\Altensor\\altensorcrm\\Altensorcrm.Persistence\\Migrations\\20260809085213_Notes.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Altensorcrm.Persistence\\Migrations\\20260809085213_Notes.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Program Files\\dotnet\\sdk\\10.0.103\\Sdks\\Microsoft.SourceLink.Common\\build\\Microsoft.SourceLink.Common.targets||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{AC638C00-2B63-88FC-9778-80AF95E15078}|Altensorcrm.Persistence\\Altensorcrm.Persistence.csproj|c:\\users\\ravan999\\desktop\\altensor\\altensorcrm\\altensorcrm.persistence\\migrations\\20260809085213_notes.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{AC638C00-2B63-88FC-9778-80AF95E15078}|Altensorcrm.Persistence\\Altensorcrm.Persistence.csproj|solutionrelative:altensorcrm.persistence\\migrations\\20260809085213_notes.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -26,32 +34,57 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "Microsoft.SourceLink.Common.targets",
-              "DocumentMoniker": "C:\\Program Files\\dotnet\\sdk\\10.0.103\\Sdks\\Microsoft.SourceLink.Common\\build\\Microsoft.SourceLink.Common.targets",
-              "RelativeDocumentMoniker": "..\\..\\..\\..\\..\\Program Files\\dotnet\\sdk\\10.0.103\\Sdks\\Microsoft.SourceLink.Common\\build\\Microsoft.SourceLink.Common.targets",
-              "ToolTip": "C:\\Program Files\\dotnet\\sdk\\10.0.103\\Sdks\\Microsoft.SourceLink.Common\\build\\Microsoft.SourceLink.Common.targets",
-              "RelativeToolTip": "..\\..\\..\\..\\..\\Program Files\\dotnet\\sdk\\10.0.103\\Sdks\\Microsoft.SourceLink.Common\\build\\Microsoft.SourceLink.Common.targets",
-              "ViewState": "AgIAACMAAAAAAAAAAAAiwCcAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003801|",
-              "WhenOpened": "2026-08-09T09:00:22.529Z",
+              "Title": "OrganizationService.cs",
+              "DocumentMoniker": "C:\\Users\\Ravan999\\Desktop\\Altensor\\altensorcrm\\Altensorcrm.Application\\Services\\Organization\\OrganizationService.cs",
+              "RelativeDocumentMoniker": "Altensorcrm.Application\\Services\\Organization\\OrganizationService.cs",
+              "ToolTip": "C:\\Users\\Ravan999\\Desktop\\Altensor\\altensorcrm\\Altensorcrm.Application\\Services\\Organization\\OrganizationService.cs",
+              "RelativeToolTip": "Altensorcrm.Application\\Services\\Organization\\OrganizationService.cs",
+              "ViewState": "AgIAAHsAAAAAAAAAAAASwIoAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-10T21:47:05.845Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "20260810202644_DealProducts.cs",
+              "DocumentMoniker": "C:\\Users\\Ravan999\\Desktop\\Altensor\\altensorcrm\\Altensorcrm.Persistence\\Migrations\\20260810202644_DealProducts.cs",
+              "RelativeDocumentMoniker": "Altensorcrm.Persistence\\Migrations\\20260810202644_DealProducts.cs",
+              "ToolTip": "C:\\Users\\Ravan999\\Desktop\\Altensor\\altensorcrm\\Altensorcrm.Persistence\\Migrations\\20260810202644_DealProducts.cs",
+              "RelativeToolTip": "Altensorcrm.Persistence\\Migrations\\20260810202644_DealProducts.cs",
+              "ViewState": "AgIAABMAAAAAAAAAAAAQwB8AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-10T20:26:45.442Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Microsoft.SourceLink.Common.targets",
+              "DocumentMoniker": "C:\\Program Files\\dotnet\\sdk\\10.0.103\\Sdks\\Microsoft.SourceLink.Common\\build\\Microsoft.SourceLink.Common.targets",
+              "RelativeDocumentMoniker": "..\\..\\..\\..\\..\\Program Files\\dotnet\\sdk\\10.0.103\\Sdks\\Microsoft.SourceLink.Common\\build\\Microsoft.SourceLink.Common.targets",
+              "ToolTip": "C:\\Program Files\\dotnet\\sdk\\10.0.103\\Sdks\\Microsoft.SourceLink.Common\\build\\Microsoft.SourceLink.Common.targets",
+              "RelativeToolTip": "..\\..\\..\\..\\..\\Program Files\\dotnet\\sdk\\10.0.103\\Sdks\\Microsoft.SourceLink.Common\\build\\Microsoft.SourceLink.Common.targets",
+              "ViewState": "AgIAACMAAAAAAAAAAAAiwDQAAAArAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003801|",
+              "WhenOpened": "2026-08-09T09:00:22.529Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
               "Title": "ILeadService.cs",
               "DocumentMoniker": "C:\\Users\\Ravan999\\Desktop\\Altensor\\altensorcrm\\Altensorcrm.Contract\\Services\\Lead\\ILeadService.cs",
               "RelativeDocumentMoniker": "Altensorcrm.Contract\\Services\\Lead\\ILeadService.cs",
               "ToolTip": "C:\\Users\\Ravan999\\Desktop\\Altensor\\altensorcrm\\Altensorcrm.Contract\\Services\\Lead\\ILeadService.cs",
               "RelativeToolTip": "Altensorcrm.Contract\\Services\\Lead\\ILeadService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-08-09T08:59:46.182Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 4,
               "Title": "20260809085213_Notes.cs",
               "DocumentMoniker": "C:\\Users\\Ravan999\\Desktop\\Altensor\\altensorcrm\\Altensorcrm.Persistence\\Migrations\\20260809085213_Notes.cs",
               "RelativeDocumentMoniker": "Altensorcrm.Persistence\\Migrations\\20260809085213_Notes.cs",
@@ -59,8 +92,7 @@
               "RelativeToolTip": "Altensorcrm.Persistence\\Migrations\\20260809085213_Notes.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-09T08:52:13.567Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-09T08:52:13.567Z"
             }
           ]
         }

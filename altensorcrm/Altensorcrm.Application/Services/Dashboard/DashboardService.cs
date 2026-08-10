@@ -50,6 +50,28 @@ public class DashboardService : IDashboardService
             ));
         }
 
+        // Calculate Monthly Revenue trends from real database deals
+        var monthlyRevenueList = allDeals
+            .GroupBy(d => d.CreatedAt.ToString("MMM yyyy"))
+            .Select(g => new MonthlyRevenueDataDto(
+                g.Key,
+                g.Sum(d => d.AnnualRevenue),
+                g.Count()
+            ))
+            .ToList();
+
+        // Calculate Conversion and Target Progress Stats
+        double conversionRate = totalLeads > 0 ? Math.Round(((double)wonDealsCount / totalLeads) * 100, 1) : 0;
+        decimal targetAmount = 100000m;
+        double targetProgress = targetAmount > 0 ? (double)Math.Min(100, Math.Round((totalRevenueGenerated / targetAmount) * 100, 1)) : 0;
+
+        var conversionStats = new ConversionStatsDto(
+            conversionRate,
+            targetAmount,
+            totalRevenueGenerated,
+            targetProgress
+        );
+
         return new DashboardStatsDto(
             totalLeads,
             avgTimeToCloseDays,
@@ -57,7 +79,9 @@ public class DashboardService : IDashboardService
             wonDealsCount,
             totalRevenueGenerated,
             lostDealsByReason,
-            perEmployeeMetrics
+            perEmployeeMetrics,
+            monthlyRevenueList,
+            conversionStats
         );
     }
 }

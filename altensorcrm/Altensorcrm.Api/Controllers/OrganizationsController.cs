@@ -62,4 +62,18 @@ public class OrganizationsController : ControllerBase
         var result = await _organizationService.DeleteAsync(id, cancellationToken);
         return Ok(result);
     }
+
+    [HttpGet("{id:guid}/contacts")]
+    public async Task<IActionResult> GetContacts(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _organizationService.GetContactsByOrganizationIdAsync(id, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/deals")]
+    public async Task<IActionResult> GetDeals(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _organizationService.GetDealsByOrganizationIdAsync(id, cancellationToken);
+        return Ok(result);
+    }
 }

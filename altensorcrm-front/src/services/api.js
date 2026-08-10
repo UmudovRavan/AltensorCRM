@@ -111,7 +111,9 @@ export const orgsApi = {
   getById: (id) => request(`/Organizations/${id}`),
   create: (data) => request('/Organizations', 'POST', data),
   update: (id, data) => request(`/Organizations/${id}`, 'PUT', data),
-  delete: (id) => request(`/Organizations/${id}`, 'DELETE')
+  delete: (id) => request(`/Organizations/${id}`, 'DELETE'),
+  getContacts: (id) => request(`/Organizations/${id}/contacts`),
+  getDeals: (id) => request(`/Organizations/${id}/deals`)
 };
 
 export const notesApi = {
@@ -134,4 +136,31 @@ export const usersApi = {
   invite: (emails, role) => request('/Users/invite', 'POST', { emails, role }),
   updateRole: (id, role) => request(`/Users/${id}/role`, 'PUT', { role }),
   getSalesHierarchy: () => request('/Users/sales-hierarchy')
+};
+
+export const productsApi = {
+  getAll: () => request('/Products'),
+  getById: (id) => request(`/Products/${id}`),
+  create: (data) => request('/Products', 'POST', data),
+  update: (id, data) => request(`/Products/${id}`, 'PUT', data),
+  delete: (id) => request(`/Products/${id}`, 'DELETE'),
+  uploadImage: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = getAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(`${API_BASE_URL}/Products/upload-image`, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+    if (!response.ok) throw new Error('Failed to upload image');
+    return await response.json();
+  }
+};
+
+export const dashboardApi = {
+  getStats: () => request('/Dashboard/stats')
 };
