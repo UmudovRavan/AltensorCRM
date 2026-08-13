@@ -72,7 +72,12 @@ export const authApi = {
     }
     return data;
   },
-  logout: () => {
+  register: (registerData) => request('/Auth/register', 'POST', registerData),
+  changePassword: (dto) => request('/Auth/change-password', 'POST', dto),
+  logout: async () => {
+    try {
+      await request('/Auth/logout', 'POST');
+    } catch {}
     setAuthToken(null);
     setCurrentUser(null);
   }
@@ -133,8 +138,33 @@ export const callLogsApi = {
 
 export const usersApi = {
   getAll: () => request('/Users'),
-  invite: (emails, role) => request('/Users/invite', 'POST', { emails, role }),
-  updateRole: (id, role) => request(`/Users/${id}/role`, 'PUT', { role }),
+  getMe: () => request('/Users/me'),
+  getById: (id) => request(`/Users/${id}`),
+  updateProfile: (id, data) => request(`/Users/${id}/profile`, 'PUT', data),
+  uploadAvatar: async (id, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = getAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(`${API_BASE_URL}/Users/${id}/avatar`, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+    if (!response.ok) throw new Error('Failed to upload avatar image');
+    return await response.json();
+  },
+  invite: (emailsOrDto, role) => {
+    const payload = typeof emailsOrDto === 'object' ? emailsOrDto : { emails: emailsOrDto, role };
+    return request('/Users/invite', 'POST', payload);
+  },
+  updateRole: (id, roleOrDto) => {
+    const payload = typeof roleOrDto === 'object' ? roleOrDto : { role: roleOrDto };
+    return request(`/Users/${id}/role`, 'PUT', payload);
+  },
+  delete: (id) => request(`/Users/${id}`, 'DELETE'),
   getSalesHierarchy: () => request('/Users/sales-hierarchy')
 };
 
@@ -161,6 +191,95 @@ export const productsApi = {
   }
 };
 
+export const dealProductsApi = {
+  getByDealId: (dealId) => request(`/DealProducts/deal/${dealId}`),
+  add: (data) => request('/DealProducts', 'POST', data),
+  delete: (id) => request(`/DealProducts/${id}`, 'DELETE')
+};
+
 export const dashboardApi = {
   getStats: () => request('/Dashboard/stats')
+};
+
+export const emailTemplatesApi = {
+  getAll: () => request('/EmailTemplates'),
+  getById: (id) => request(`/EmailTemplates/${id}`),
+  create: (data) => request('/EmailTemplates', 'POST', data),
+  update: (id, data) => request(`/EmailTemplates/${id}`, 'PUT', data),
+  toggleEnabled: (id) => request(`/EmailTemplates/${id}/toggle`, 'PATCH'),
+  delete: (id) => request(`/EmailTemplates/${id}`, 'DELETE')
+};
+
+export const emailsApi = {
+  send: (dto) => request('/Emails/send', 'POST', dto),
+  getByLeadId: (leadId) => request(`/Emails/lead/${leadId}`),
+  getByDealId: (dealId) => request(`/Emails/deal/${dealId}`)
+};
+
+const TASK_MGMT_API_URL = 'http://localhost:5243/api';
+
+async function taskRequest(endpoint, method = 'GET', body = null) {
+  const token = getAuthToken() || localStorage.getItem('authToken');
+  const headers = {};
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const config = {
+    method,
+    headers,
+  };
+
+  if (body) {
+    if (body instanceof FormData) {
+      config.body = body;
+    } else {
+      headers['Content-Type'] = 'application/json';
+      config.body = JSON.stringify(body);
+    }
+  }
+
+  const response = await fetch(`${TASK_MGMT_API_URL}${endpoint}`, config);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let errorMessage = 'Xəta baş verdi';
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.message || errorJson.title || errorText;
+    } catch {
+      errorMessage = errorText || `Xəta kodu: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return await response.json();
+  }
+  return null;
+}
+
+export const taskManagementApi = {
+  getAllTasks: () => taskRequest('/Task/GetAllTask'),
+  getAllUsers: () => taskRequest('/Authorize/AllUsers'),
+  getTaskById: (id) => taskRequest(`/Task/GetTask/${id}`),
+  createTask: (data) => {
+    const formData = new FormData();
+    formData.append('Title', data.title);
+    formData.append('Description', data.description || '');
+    formData.append('Difficulty', String(data.difficulty ?? 0));
+    formData.append('Status', String(data.status ?? 0));
+    if (data.deadline) formData.append('Deadline', data.deadline);
+    if (data.createdByUserId) formData.append('CreatedByUserId', data.createdByUserId);
+    if (data.assignedToUserId) formData.append('AssignedToUserId', data.assignedToUserId);
+    return taskRequest('/Task/CreateTask', 'POST', formData);
+  },
+  updateTask: (data) => taskRequest('/Task/UpdateTask', 'PUT', data),
+  deleteTask: (id) => taskRequest(`/Task/DeleteTask/${id}`, 'DELETE'),
+  assignTask: (taskId, userId) => taskRequest(`/Task/AssignTask?taskId=${taskId}&userId=${userId}`, 'POST'),
+  addComment: (taskId, comment) => taskRequest(`/Task/AddComment?taskId=${taskId}&comment=${encodeURIComponent(comment)}`, 'POST'),
+  getNotifications: () => taskRequest('/Notifications'),
+  markNotificationRead: (id) => taskRequest(`/Notifications/${id}/read`, 'POST')
 };

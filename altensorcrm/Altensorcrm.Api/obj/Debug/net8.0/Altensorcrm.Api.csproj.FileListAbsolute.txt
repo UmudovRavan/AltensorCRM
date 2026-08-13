@@ -274,4 +274,5 @@ C:\Users\Ravan999\Desktop\Altensor\altensorcrm\Altensorcrm.Api\obj\Debug\net8.0\
 C:\Users\Ravan999\Desktop\Altensor\altensorcrm\Altensorcrm.Api\obj\Debug\net8.0\Altensor.034DF920.Up2Date
 C:\Users\Ravan999\Desktop\Altensor\altensorcrm\Altensorcrm.Api\obj\Debug\net8.0\Altensorcrm.Api.genruntimeconfig.cache
 C:\Users\Ravan999\Desktop\Altensor\altensorcrm\Altensorcrm.Api\obj\Debug\net8.0\ref\Altensorcrm.Api.dll
+C:\Users\Ravan999\Desktop\Altensor\altensorcrm\Altensorcrm.Api\bin\Debug\net8.0\Altensorcrm.Api.staticwebassets.runtime.json
 C:\Users\Ravan999\Desktop\Altensor\altensorcrm\Altensorcrm.Api\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt

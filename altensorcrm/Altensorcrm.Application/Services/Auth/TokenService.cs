@@ -1,60 +1,85 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Altensorcrm.Contract.Options;
 using Altensorcrm.Contract.Services.Auth;
-using Microsoft.Extensions.Configuration;
+using Altensorcrm.Domain.Entity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Altensorcrm.Application.Services.Auth;
 
 public class TokenService : ITokenService
 {
-    private readonly IConfiguration _configuration;
+    private readonly UserManager<AppUser> _userManager;
+    private readonly JwtOption _jwtOption;
 
-    public TokenService(IConfiguration configuration)
+    public TokenService(UserManager<AppUser> userManager, IOptions<JwtOption> jwtOption)
     {
-        _configuration = configuration;
+        _userManager = userManager;
+        _jwtOption = jwtOption.Value;
     }
 
-    public (string Token, DateTime Expiration) GenerateToken(Domain.Entity.User user)
+    public async Task<string> GenerateTokenAsync(AppUser user)
     {
-        var secretKey = _configuration["JwtSettings:SecretKey"]
-                        ?? _configuration["Jwt:Key"]
-                        ?? "SuperSecretKeyForAltensorCrm2026SystemSecurityAndAuthentication_DoNotShare!";
+        var (token, _) = await GenerateTokenInternalAsync(user);
+        return token;
+    }
 
-        var issuer = _configuration["JwtSettings:Issuer"] ?? _configuration["Jwt:Issuer"] ?? "AltensorCRM";
-        var audience = _configuration["JwtSettings:Audience"] ?? _configuration["Jwt:Audience"] ?? "AltensorCRMUsers";
+    public (string Token, DateTime Expiration) GenerateToken(AppUser user)
+    {
+        return GenerateTokenInternalAsync(user).GetAwaiter().GetResult();
+    }
 
-        var expirationInMinutesStr = _configuration["JwtSettings:ExpirationInMinutes"] ?? _configuration["Jwt:DurationInMinutes"] ?? "480";
-        double.TryParse(expirationInMinutesStr, out double expirationInMinutes);
-        if (expirationInMinutes <= 0)
-        {
-            expirationInMinutes = 480;
-        }
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var claims = new[]
+    private async Task<(string Token, DateTime Expiration)> GenerateTokenInternalAsync(AppUser user)
+    {
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Name, user.UserName ?? user.Email ?? string.Empty),
+            new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
             new Claim(ClaimTypes.GivenName, $"{user.FirstName} {user.LastName}".Trim()),
             new Claim("Department", user.Department ?? string.Empty)
         };
 
-        var expiration = DateTime.UtcNow.AddMinutes(expirationInMinutes);
+        var roles = await _userManager.GetRolesAsync(user);
+        if (roles == null || roles.Count == 0)
+        {
+            roles = new List<string> { "Admin" };
+        }
 
-        var token = new JwtSecurityToken(
-            issuer: issuer,
-            audience: audience,
-            claims: claims,
-            expires: expiration,
-            signingCredentials: credentials);
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+            claims.Add(new Claim("role", role));
+        }
 
-        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+        var keyString = string.IsNullOrWhiteSpace(_jwtOption.Key) 
+            ? "C6r8h3Q9Zk7vR0m4yF2pJt9sXqL1uVw8bN5aGz7YcR0qP8tLzW4eF9jK0sM2nVxQ" 
+            : _jwtOption.Key;
 
-        return (tokenString, expiration);
+        var issuer = string.IsNullOrWhiteSpace(_jwtOption.Issuer) ? "TaskManager" : _jwtOption.Issuer;
+        var audience = string.IsNullOrWhiteSpace(_jwtOption.Audience) ? "TaskManaager" : _jwtOption.Audience;
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var expiryMinutes = _jwtOption.ExpiryMinutes > 0 ? _jwtOption.ExpiryMinutes : 60;
+        var expiration = DateTime.UtcNow.AddMinutes(expiryMinutes);
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Expires = expiration,
+            SigningCredentials = credentials,
+            Issuer = issuer,
+            Audience = audience
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        var jwt = tokenHandler.WriteToken(token);
+
+        return (jwt, expiration);
     }
 }

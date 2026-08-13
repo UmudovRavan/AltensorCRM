@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { orgsApi } from '../../services/api';
+import { orgsApi, usersApi } from '../../services/api';
 import {
   PlusIcon,
   ArrowPathIcon,
@@ -89,6 +89,27 @@ const initialOrganizations = [];
 
 const OrganizationsPage = () => {
   const [organizations, setOrganizations] = useState(initialOrganizations);
+  const [ownersList, setOwnersList] = useState(initialOwnerList);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const data = await usersApi.getAll();
+      if (Array.isArray(data) && data.length > 0) {
+        setOwnersList(data.map(u => ({
+          id: u.id,
+          name: u.name || u.email || 'User',
+          initial: (u.name || u.email || 'U').charAt(0).toUpperCase(),
+          email: u.email || ''
+        })));
+      }
+    } catch (err) {
+      console.warn('Notice fetching users in OrganizationsPage:', err);
+    }
+  };
   const [selectedRows, setSelectedRows] = useState([]);
   const [columns, setColumns] = useState(initialColumns);
 
@@ -99,6 +120,12 @@ const OrganizationsPage = () => {
 
   // Filter States
   const [orgNameFilter, setOrgNameFilter] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    setTimeout(() => setIsRefreshing(false), 400);
+  };
   const [selectedEmployeesFilter, setSelectedEmployeesFilter] = useState('No. of Employees');
   const [isEmployeesDropdownOpen, setIsEmployeesDropdownOpen] = useState(false);
 
@@ -665,8 +692,13 @@ const OrganizationsPage = () => {
 
         {/* Right Actions */}
         <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-          <button className="p-1.5 rounded-xl border border-[#27272A] bg-[#18181B] hover:bg-[#27272A] text-[#A1A1AA] hover:text-white transition-colors cursor-pointer">
-            <ArrowPathIcon className="w-4 h-4" />
+          <button
+            type="button"
+            onClick={handleRefresh}
+            title="Refresh data"
+            className="p-1.5 rounded-xl border border-[#27272A] bg-[#18181B] hover:bg-[#27272A] text-[#A1A1AA] hover:text-white transition-colors cursor-pointer"
+          >
+            <ArrowPathIcon className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-sky-400' : ''}`} />
           </button>
 
           {activeView === 'Kanban' && (

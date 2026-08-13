@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { leadsApi, dealsApi, contactsApi, orgsApi, dashboardApi } from '../../services/api';
+import { leadsApi, dealsApi, contactsApi, orgsApi, dashboardApi, usersApi } from '../../services/api';
 import {
   ArrowPathIcon,
   PencilIcon,
@@ -201,6 +201,9 @@ const defaultUnifiedWidgets = [
 const CrmDashboardPage = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('Last 30 Days');
   const [selectedUser, setSelectedUser] = useState('All Sales Users');
+  const [usersList, setUsersList] = useState([
+    { id: 'all', name: 'All Sales Users', initial: 'A' }
+  ]);
   const [isPeriodOpen, setIsPeriodOpen] = useState(false);
   const [isUserOpen, setIsUserOpen] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -240,6 +243,28 @@ const CrmDashboardPage = () => {
   const userRef = useRef(null);
 
   useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const data = await usersApi.getAll();
+        const list = Array.isArray(data) ? data : (data?.items || data?.data || []);
+        if (Array.isArray(list) && list.length > 0) {
+          const formatted = list.map(u => ({
+            id: u.id,
+            name: u.name || u.email || 'User',
+            email: u.email || '',
+            initial: (u.name || u.email || 'U').charAt(0).toUpperCase(),
+            avatarUrl: u.avatarUrl || null
+          }));
+          setUsersList([{ id: 'all', name: 'All Sales Users', initial: 'A' }, ...formatted]);
+        }
+      } catch (err) {
+        console.warn('Notice fetching users in Dashboard:', err);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (periodRef.current && !periodRef.current.contains(event.target)) setIsPeriodOpen(false);
       if (userRef.current && !userRef.current.contains(event.target)) setIsUserOpen(false);
@@ -250,7 +275,7 @@ const CrmDashboardPage = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [selectedUser]);
+  }, [selectedUser, selectedPeriod]);
 
   const fetchDashboardData = async () => {
     try {
@@ -267,13 +292,29 @@ const CrmDashboardPage = () => {
       const dealsList = Array.isArray(dealsRes) ? dealsRes : dealsRes?.items || [];
 
       // Filter by selected user if applicable
-      const userFilteredDeals = selectedUser === 'All Sales Users' ? dealsList : dealsList.filter(d => 
-        (d.dealOwnerName || d.owner || '').toLowerCase().includes(selectedUser.toLowerCase())
-      );
+      const isAllUsers = !selectedUser || selectedUser === 'All Sales Users' || selectedUser === 'all';
+      const selectedUserObj = usersList.find(u => u.name === selectedUser || u.id === selectedUser);
+      const targetUserId = selectedUserObj?.id;
+      const targetUserName = (selectedUserObj?.name || selectedUser || '').toLowerCase();
+      const targetUserEmail = (selectedUserObj?.email || '').toLowerCase();
 
-      const userFilteredLeads = selectedUser === 'All Sales Users' ? leadsList : leadsList.filter(l => 
-        (l.leadOwnerName || l.owner || '').toLowerCase().includes(selectedUser.toLowerCase())
-      );
+      const userFilteredDeals = isAllUsers ? dealsList : dealsList.filter(d => {
+        const dOwnerId = String(d.dealOwnerId || d.ownerId || d.userId || '');
+        const dOwnerName = String(d.dealOwnerName || d.ownerName || d.owner || '').toLowerCase();
+        if (targetUserId && targetUserId !== 'all' && dOwnerId && String(targetUserId) === dOwnerId) return true;
+        if (targetUserName && dOwnerName.includes(targetUserName)) return true;
+        if (targetUserEmail && dOwnerName.includes(targetUserEmail)) return true;
+        return false;
+      });
+
+      const userFilteredLeads = isAllUsers ? leadsList : leadsList.filter(l => {
+        const lOwnerId = String(l.leadOwnerId || l.ownerId || l.userId || '');
+        const lOwnerName = String(l.leadOwnerName || l.ownerName || l.owner || '').toLowerCase();
+        if (targetUserId && targetUserId !== 'all' && lOwnerId && String(targetUserId) === lOwnerId) return true;
+        if (targetUserName && lOwnerName.includes(targetUserName)) return true;
+        if (targetUserEmail && lOwnerName.includes(targetUserEmail)) return true;
+        return false;
+      });
 
       // Metrics
       const totalLeads = userFilteredLeads.length;
@@ -370,15 +411,52 @@ const CrmDashboardPage = () => {
       });
       setDealsByOwnerData(Object.entries(ownerMap).map(([owner, count]) => ({ name: owner, count })));
 
-      // Dynamic Sales Trend Chart
-      setSalesTrendData([
-        { name: '15 Aug', leads: Math.max(totalLeads - 4, 1), deals: Math.max(userFilteredDeals.length - 3, 1), wonDeals: Math.max(wonDeals - 1, 0) },
-        { name: '19 Aug', leads: Math.max(totalLeads - 2, 2), deals: Math.max(userFilteredDeals.length - 2, 2), wonDeals: Math.max(wonDeals - 1, 0) },
-        { name: '23 Aug', leads: Math.max(totalLeads - 1, 3), deals: Math.max(userFilteredDeals.length - 1, 3), wonDeals: Math.max(wonDeals, 0) },
-        { name: '27 Aug', leads: totalLeads, deals: userFilteredDeals.length, wonDeals: wonDeals },
-        { name: '31 Aug', leads: totalLeads + 1, deals: userFilteredDeals.length + 1, wonDeals: wonDeals },
-        { name: '5 Sep', leads: totalLeads + 2, deals: userFilteredDeals.length + 1, wonDeals: wonDeals + 1 }
-      ]);
+      // Dynamic Sales Trend Chart (Real-time dynamic dates ending on current date)
+      const generateDynamicSalesTrend = (leads, deals, periodName) => {
+        const now = new Date();
+        let daysBack = 30;
+        if (periodName === 'Last 7 Days') daysBack = 7;
+        else if (periodName === 'Last 60 Days') daysBack = 60;
+        else if (periodName === 'Last 90 Days') daysBack = 90;
+
+        const pointsCount = 6;
+        const intervalDays = Math.max(Math.floor(daysBack / (pointsCount - 1)), 1);
+
+        const points = [];
+        for (let i = pointsCount - 1; i >= 0; i--) {
+          const d = new Date(now);
+          d.setDate(d.getDate() - (i * intervalDays));
+          
+          const formattedLabel = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(d);
+
+          const leadsCountOnDate = leads.filter(l => {
+            const created = l.createdAt || l.createAt ? new Date(l.createdAt || l.createAt) : null;
+            return !created || created <= d;
+          }).length;
+
+          const dealsCountOnDate = deals.filter(dl => {
+            const created = dl.createdAt || dl.createAt ? new Date(dl.createdAt || dl.createAt) : null;
+            return !created || created <= d;
+          }).length;
+
+          const wonCountOnDate = deals.filter(dl => {
+            const st = (dl.statusName || dl.status || '').toLowerCase();
+            const created = dl.createdAt || dl.createAt ? new Date(dl.createdAt || dl.createAt) : null;
+            return st === 'won' && (!created || created <= d);
+          }).length;
+
+          points.push({
+            name: formattedLabel,
+            leads: leadsCountOnDate,
+            deals: dealsCountOnDate,
+            wonDeals: wonCountOnDate
+          });
+        }
+
+        return points;
+      };
+
+      setSalesTrendData(generateDynamicSalesTrend(userFilteredLeads, userFilteredDeals, selectedPeriod));
 
     } catch (err) {
       console.warn('Notice fetching dashboard data:', err);
@@ -462,7 +540,7 @@ const CrmDashboardPage = () => {
     setIsAddModalOpen(false);
   };
 
-  const filteredUsers = salesUsers.filter((u) =>
+  const filteredUsers = usersList.filter((u) =>
     u.name.toLowerCase().includes(userSearchQuery.toLowerCase())
   );
 
@@ -628,9 +706,17 @@ const CrmDashboardPage = () => {
                       selectedUser === u.name ? 'bg-[#2C2C2E] text-white font-semibold' : 'hover:bg-[#2C2C2E]/60 text-[#D4D4D8]'
                     }`}
                   >
-                    <span className="w-5 h-5 rounded-full bg-[#2C2C2E] text-[#A1A1AA] text-[10px] font-bold flex items-center justify-center shrink-0">
-                      {u.initial}
-                    </span>
+                    {u.avatarUrl ? (
+                      <img
+                        src={u.avatarUrl.startsWith('http') ? u.avatarUrl : `https://localhost:7114${u.avatarUrl}`}
+                        alt="Avatar"
+                        className="w-5 h-5 rounded-full object-cover shrink-0 border border-[#3F3F46]"
+                      />
+                    ) : (
+                      <span className="w-5 h-5 rounded-full bg-[#2C2C2E] text-[#A1A1AA] text-[10px] font-bold flex items-center justify-center shrink-0">
+                        {u.initial}
+                      </span>
+                    )}
                     <span className="truncate">{u.name}</span>
                   </button>
                 ))}

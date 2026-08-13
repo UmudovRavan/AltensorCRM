@@ -9,6 +9,8 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
     ITaskRepository Tasks { get; }
     INoteRepository Notes { get; }
     ICallLogRepository CallLogs { get; }
+    IEmailTemplateRepository EmailTemplates { get; }
+    IEmailLogRepository EmailLogs { get; }
 
     IGenericRepository<TEntity> Repository<TEntity>() where TEntity : class;
 

@@ -1,3 +1,4 @@
+using Altensorcrm.Domain.Entity;
 using Altensorcrm.Persistence.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;

@@ -39,4 +39,11 @@ public class AuthController : ControllerBase
         var result = await _authService.ChangePasswordAsync(dto, cancellationToken);
         return Ok(result);
     }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        await _authService.LogoutAsync();
+        return Ok(new { message = "Logged out successfully" });
+    }
 }

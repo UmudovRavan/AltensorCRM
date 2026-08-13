@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Altensorcrm.Contract")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b2a7840c39c6acca1885ab996db878077777b476")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6b3c3fc0aa716576bc371b8a1b4b75e78e2ff505")]
 [assembly: System.Reflection.AssemblyProductAttribute("Altensorcrm.Contract")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Altensorcrm.Contract")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

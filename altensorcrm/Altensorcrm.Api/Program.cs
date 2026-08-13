@@ -2,9 +2,12 @@ using Altensorcrm.Api.Middlewares;
 using Altensorcrm.Application;
 using Altensorcrm.Application.Extentions;
 using Altensorcrm.Application.Profiles;
+using Altensorcrm.Contract.Options;
+using Altensorcrm.Domain.Entity;
 using Altensorcrm.Persistence.Data;
 using Altensorcrm.Persistence.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -19,20 +22,34 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
-
 builder.Services.AddAutoMapper(_ => { }, typeof(CustomProfile).Assembly);
 
-    
+builder.Services.Configure<JwtOption>(builder.Configuration.GetSection("JwtOption"));
+builder.Services.Configure<EmailOption>(builder.Configuration.GetSection("Email"));
+
 builder.Services.AddServiceRegistration();
 builder.Services.AddPersistenceServices(builder.Configuration);
 
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"]
-                ?? builder.Configuration["Jwt:Key"]
-                ?? "SuperSecretKeyForAltensorCrm2026SystemSecurityAndAuthentication_DoNotShare!";
+builder.Services.AddIdentity<AppUser, IdentityRole<Guid>>(opt =>
+{
+    opt.Password.RequiredLength = 6;
+    opt.Password.RequireDigit = false;
+    opt.Password.RequireUppercase = false;
+    opt.Password.RequireLowercase = false;
+    opt.Password.RequireNonAlphanumeric = false;
+    opt.User.RequireUniqueEmail = true;
+    opt.SignIn.RequireConfirmedEmail = false;
+})
+.AddEntityFrameworkStores<AppDbContext>()
+.AddDefaultTokenProviders();
 
-var issuer = jwtSettings["Issuer"] ?? builder.Configuration["Jwt:Issuer"] ?? "AltensorCRM";
-var audience = jwtSettings["Audience"] ?? builder.Configuration["Jwt:Audience"] ?? "AltensorCRMUsers";
+var jwtOption = builder.Configuration.GetSection("JwtOption").Get<JwtOption>() ?? new JwtOption();
+var secretKey = string.IsNullOrWhiteSpace(jwtOption.Key)
+    ? "C6r8h3Q9Zk7vR0m4yF2pJt9sXqL1uVw8bN5aGz7YcR0qP8tLzW4eF9jK0sM2nVxQ"
+    : jwtOption.Key;
+
+var issuer = string.IsNullOrWhiteSpace(jwtOption.Issuer) ? "TaskManager" : jwtOption.Issuer;
+var audience = string.IsNullOrWhiteSpace(jwtOption.Audience) ? "TaskManaager" : jwtOption.Audience;
 
 builder.Services.AddAuthentication(options =>
 {
@@ -45,8 +62,10 @@ builder.Services.AddAuthentication(options =>
     {
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-        ValidateIssuer = false,
-        ValidateAudience = false,
+        ValidateIssuer = true,
+        ValidIssuer = issuer,
+        ValidateAudience = true,
+        ValidAudience = audience,
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
@@ -96,6 +115,7 @@ try
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await dbContext.Database.MigrateAsync();
+    await Altensorcrm.Persistence.Seed.IdentitySeedData.SeedAdminUserAsync(app.Services);
 }
 catch
 {

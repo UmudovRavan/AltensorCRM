@@ -12,6 +12,7 @@ public record LoginResponseDto(
     string Username,
     string FullName,
     string Email,
+    string Role,
     string? Department
 );
 

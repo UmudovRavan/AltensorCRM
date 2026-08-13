@@ -25,6 +25,8 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<DealProduct> DealProducts => Set<DealProduct>();
+    public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
+    public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

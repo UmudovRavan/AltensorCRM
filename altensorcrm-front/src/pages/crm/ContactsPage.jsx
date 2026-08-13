@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { contactsApi } from '../../services/api';
+import { contactsApi, usersApi } from '../../services/api';
 import {
   PlusIcon,
   ArrowPathIcon,
@@ -122,6 +122,35 @@ const ContactsPage = () => {
   const [salutations, setSalutations] = useState(initialSalutations);
   const [genders, setGenders] = useState(initialGenders);
   const [ownersList, setOwnersList] = useState(initialOwnerList);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchUsers();
+    setTimeout(() => setIsRefreshing(false), 400);
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const data = await usersApi.getAll();
+      const list = Array.isArray(data) ? data : (data?.items || data?.data || []);
+      if (Array.isArray(list) && list.length > 0) {
+        setOwnersList(list.map(u => ({
+          id: u.id,
+          name: u.name || u.email || 'User',
+          initial: (u.name || u.email || 'U').charAt(0).toUpperCase(),
+          email: u.email || ''
+        })));
+      }
+    } catch (err) {
+      console.warn('Notice fetching users in ContactsPage:', err);
+    }
+  };
 
   // Views & Dropdowns
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -656,8 +685,13 @@ const mapGenderToEnum = (gen) => {
 
         {/* Right Actions */}
         <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-          <button className="p-1.5 rounded-xl border border-[#27272A] bg-[#18181B] hover:bg-[#27272A] text-[#A1A1AA] hover:text-white transition-colors cursor-pointer">
-            <ArrowPathIcon className="w-4 h-4" />
+          <button
+            type="button"
+            onClick={handleRefresh}
+            title="Refresh data"
+            className="p-1.5 rounded-xl border border-[#27272A] bg-[#18181B] hover:bg-[#27272A] text-[#A1A1AA] hover:text-white transition-colors cursor-pointer"
+          >
+            <ArrowPathIcon className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-sky-400' : ''}`} />
           </button>
 
           {activeView === 'Kanban' && (

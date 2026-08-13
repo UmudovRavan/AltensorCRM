@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
+import { authApi, usersApi, emailTemplatesApi, getCurrentUser } from '../../services/api';
+import { getStoredTemplates, saveStoredTemplates } from '../../components/crm/EmailWidget';
 import {
   UserIcon,
   AdjustmentsHorizontalIcon,
@@ -34,7 +36,9 @@ import {
   DocumentDuplicateIcon,
   AdjustmentsVerticalIcon,
   CogIcon,
-  PencilIcon
+  PencilIcon,
+  TrashIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
 const navCategories = [
@@ -92,15 +96,7 @@ const navCategories = [
   }
 ];
 
-const initialUsersList = [
-  { id: '1', name: 'Eflan', email: 'avalon.fabrik@gmail.com', initial: 'E', role: 'Manager', isManager: true },
-  { id: '2', name: 'Elvin Muzaffarli', email: 'elvinmuzaffarli@gmail.com', initial: 'E', role: 'Admin', isManager: false },
-  { id: '3', name: 'Fidan', email: 'fidan@bmgi.az', initial: 'F', role: 'Admin', isManager: false },
-  { id: '4', name: 'Info', email: 'info@bmgi.az', initial: 'İ', role: 'Admin', isManager: false },
-  { id: '5', name: 'Orxan', email: 'orkhan@bmgi.az', initial: 'O', role: 'Admin', isManager: false },
-  { id: '6', name: 'Said Baghirov', email: 'said@apply-uni.com', initial: 'S', role: 'Admin', isManager: false },
-  { id: '7', name: 'Yusif Hashimov', email: 'yusif.hashimov@outlook.com', initial: 'Y', role: 'Admin', isManager: false }
-];
+
 
 const initialHomeActions = [
   { id: '1', no: 1, label: 'Apps', type: 'Route', route: '#', hidden: false },
@@ -113,13 +109,89 @@ const initialHomeActions = [
 
 const SettingsPage = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('profile');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'profile');
+
+  // EMAIL TEMPLATES STATE (Screenshots 3, 4, 5 Match)
+  const [emailTemplates, setEmailTemplates] = useState(getStoredTemplates());
+  const [isEditingTemplate, setIsEditingTemplate] = useState(location.state?.openNewModal || false);
+  const [templateForm, setTemplateForm] = useState({
+    id: null,
+    name: 'Payment Reminder',
+    forType: 'Deal',
+    subject: 'Payment Reminder from Frappé - (#{{ name }})',
+    contentType: 'Rich Text',
+    content: 'Dear {{ lead_name }},\n\nThis is a reminder for the payment of {{ grand_total }}.\n\nThanks,\nFrappé',
+    enabled: true
+  });
+
+  const [isForDropdownOpen, setIsForDropdownOpen] = useState(false);
+  const [isContentTypeDropdownOpen, setIsContentTypeDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const apiData = await emailTemplatesApi.getAll();
+        if (Array.isArray(apiData)) {
+          setEmailTemplates(apiData);
+          saveStoredTemplates(apiData);
+        }
+      } catch (err) {
+        console.warn('API fetch email templates notice:', err);
+      }
+    };
+    fetchTemplates();
+
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+    }
+    if (location.state?.openNewModal) {
+      setIsEditingTemplate(true);
+    }
+  }, [location.state]);
+
+  const handleSaveTemplate = async (e) => {
+    e?.preventDefault();
+    if (!templateForm.name.trim() || !templateForm.subject.trim()) {
+      showToast('Xahiş olunur şablon adını və mövzusunu daxil edin.', 'error');
+      return;
+    }
+
+    const payload = {
+      name: templateForm.name,
+      forType: templateForm.forType,
+      subject: templateForm.subject,
+      contentType: templateForm.contentType,
+      content: templateForm.content,
+      enabled: templateForm.enabled
+    };
+
+    try {
+      if (templateForm.id) {
+        await emailTemplatesApi.update(templateForm.id, { id: templateForm.id, ...payload });
+      } else {
+        await emailTemplatesApi.create(payload);
+      }
+      const updated = await emailTemplatesApi.getAll();
+      if (Array.isArray(updated)) {
+        setEmailTemplates(updated);
+        saveStoredTemplates(updated);
+      }
+      showToast('Email template saved successfully!', 'success');
+      setIsEditingTemplate(false);
+    } catch (err) {
+      console.warn('API EmailTemplates save notice:', err);
+      showToast(err.message || 'Email template saxlanılarkən xəta baş verdi.', 'error');
+    }
+  };
 
   // Profile Edit Modal / Form States
   const [userProfile, setUserProfile] = useState({
+    id: null,
     name: 'Administrator',
     email: 'admin@example.com',
-    initial: 'A'
+    initial: 'A',
+    avatarUrl: null
   });
 
   const [isEditingName, setIsEditingName] = useState(false);
@@ -137,7 +209,7 @@ const SettingsPage = () => {
   // PREFERENCES STATE
   const { theme, setTheme } = useTheme();
   const [selectedLanguage, setSelectedLanguage] = useState('');
-  const [selectedTimezone, setSelectedTimezone] = useState('Asia/Baku');
+  const [selectedTimezone, setSelectedTimezone] = useState(() => localStorage.getItem('crmTimezone') || 'Asia/Baku');
 
   // GENERAL SETTINGS STATE
   const [generalSettings, setGeneralSettings] = useState({
@@ -174,9 +246,64 @@ const SettingsPage = () => {
   });
 
   // USERS MANAGEMENT STATE
-  const [usersList, setUsersList] = useState(initialUsersList);
+  const [usersList, setUsersList] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [newUserForm, setNewUserForm] = useState({ name: '', email: '', role: 'Admin' });
+  const [openUserMenuId, setOpenUserMenuId] = useState(null);
+
+  const currentUser = getCurrentUser();
+  const rawRole = (currentUser?.role || currentUser?.Role || 'Admin').toLowerCase();
+  const isAdmin = !currentUser || rawRole.includes('admin') || rawRole.includes('manager') || !currentUser?.role;
+
+  // Soft Toast Notification State
+  const [toast, setToast] = useState(null);
+  const [deleteConfirmUserId, setDeleteConfirmUserId] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 3500);
+  };
+
+  const handleRoleChange = async (userId, newRole) => {
+    if (!isAdmin) {
+      showToast('Yalnız Admin hüququ olan istifadəçilər rol dəyişdirə bilər.', 'error');
+      return;
+    }
+    try {
+      await usersApi.updateRole(userId, newRole);
+      setUsersList(prev => prev.map(u => u.id === userId ? {
+        ...u,
+        role: newRole,
+        isManager: newRole === 'Manager' || newRole === 'Admin'
+      } : u));
+      showToast(`Rol "${newRole}" olaraq yeniləndi`, 'success');
+    } catch (err) {
+      showToast(err.message || 'Rol dəyişdirilərkən xəta baş verdi.', 'error');
+    }
+  };
+
+  const handleRemoveUser = async (userId) => {
+    if (!isAdmin) {
+      showToast('Yalnız Admin hüququ olan istifadəçilər istifadəçi silə bilər.', 'error');
+      return;
+    }
+    setDeleteConfirmUserId(userId);
+  };
+
+  const confirmDeleteUser = async (userId) => {
+    try {
+      await usersApi.delete(userId);
+      setUsersList(prev => prev.filter(u => u.id !== userId));
+      setOpenUserMenuId(null);
+      setDeleteConfirmUserId(null);
+      showToast('İstifadəçi uğurla silindi', 'success');
+    } catch (err) {
+      showToast(err.message || 'İstifadəçi silinərkən xəta baş verdi.', 'error');
+    }
+  };
 
   // INVITE USER STATE
   const [inviteEmails, setInviteEmails] = useState('');
@@ -188,43 +315,181 @@ const SettingsPage = () => {
   // HOME ACTIONS STATE (Screenshot 2!)
   const [homeActions, setHomeActions] = useState(initialHomeActions);
 
-  const handleSaveName = () => {
-    if (tempName.trim()) {
-      setUserProfile({
-        ...userProfile,
-        name: tempName,
-        initial: tempName.charAt(0).toUpperCase()
-      });
-    }
-    setIsEditingName(false);
-  };
-
-  const handleChangePasswordSubmit = (e) => {
-    e.preventDefault();
-    setPasswordSuccess(true);
-    setTimeout(() => {
-      setPasswordSuccess(false);
-      setIsChangePasswordOpen(false);
-      setPasswordForm({ current: '', newPass: '', confirmPass: '' });
-    }, 1200);
-  };
-
-  const handleAddNewUserSubmit = (e) => {
-    e.preventDefault();
-    if (!newUserForm.name || !newUserForm.email) return;
-
-    const newUser = {
-      id: String(Date.now()),
-      name: newUserForm.name,
-      email: newUserForm.email,
-      initial: newUserForm.name.charAt(0).toUpperCase(),
-      role: newUserForm.role,
-      isManager: newUserForm.role === 'Manager'
+  useEffect(() => {
+    const loadUsers = async () => {
+      setLoadingUsers(true);
+      try {
+        const data = await usersApi.getAll();
+        const list = Array.isArray(data) ? data : (data?.items || data?.data || []);
+        if (Array.isArray(list) && list.length > 0) {
+          const formatted = list.map(u => ({
+            id: u.id,
+            name: u.name || u.email || 'User',
+            email: u.email || '',
+            initial: (u.name || u.email || 'U').charAt(0).toUpperCase(),
+            role: u.role || 'Admin',
+            avatarUrl: u.avatarUrl || null,
+            isManager: u.isManager
+          }));
+          setUsersList(formatted);
+        }
+      } catch (err) {
+        console.warn('Backend users load notice:', err);
+      } finally {
+        setLoadingUsers(false);
+      }
     };
+    loadUsers();
+  }, []);
 
-    setUsersList([...usersList, newUser]);
-    setIsAddUserModalOpen(false);
-    setNewUserForm({ name: '', email: '', role: 'Admin' });
+  useEffect(() => {
+    const fetchMe = async () => {
+      try {
+        const me = await usersApi.getMe();
+        if (me) {
+          const profileName = me.name || `${me.firstName || ''} ${me.lastName || ''}`.trim() || me.email || 'Administrator';
+          setUserProfile({
+            id: me.id,
+            name: profileName,
+            email: me.email || '',
+            initial: profileName.charAt(0).toUpperCase() || 'A',
+            avatarUrl: me.avatarUrl || null
+          });
+          setTempName(profileName);
+        }
+      } catch (err) {
+        console.warn('Notice loading current user profile:', err);
+      }
+    };
+    fetchMe();
+  }, []);
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      showToast('Şəkil yüklənir...', 'info');
+      const userId = userProfile.id || getCurrentUser()?.id || getCurrentUser()?.userId;
+      const res = await usersApi.uploadAvatar(userId, file);
+      if (res && res.avatarUrl) {
+        setUserProfile(prev => ({
+          ...prev,
+          avatarUrl: res.avatarUrl
+        }));
+        showToast('Profil şəkli uğurla yeniləndi!', 'success');
+      }
+    } catch (err) {
+      console.error('Avatar upload error:', err);
+      showToast(err.message || 'Profil şəkli yüklənərkən xəta baş verdi.', 'error');
+    }
+  };
+
+  const handleSaveName = async () => {
+    if (!tempName.trim()) return;
+    try {
+      const userId = userProfile.id || getCurrentUser()?.id || getCurrentUser()?.userId;
+      if (userId) {
+        await usersApi.updateProfile(userId, { name: tempName.trim() });
+      }
+      setUserProfile(prev => ({
+        ...prev,
+        name: tempName.trim(),
+        initial: tempName.trim().charAt(0).toUpperCase()
+      }));
+      showToast('Ad uğurla yeniləndi!', 'success');
+    } catch (err) {
+      console.error('Update profile name error:', err);
+      showToast(err.message || 'Ad yenilənərkən xəta baş verdi.', 'error');
+    } finally {
+      setIsEditingName(false);
+    }
+  };
+
+  const handleChangePasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (passwordForm.newPass !== passwordForm.confirmPass) {
+      showToast('Yeni şifrələr bir-biri ilə eyni deyil!', 'error');
+      return;
+    }
+    const currUser = getCurrentUser();
+    if (!currUser || !currUser.userId) {
+      showToast('İstifadəçi identifikasiya olunmadı.', 'error');
+      return;
+    }
+    try {
+      await authApi.changePassword({
+        userId: currUser.userId,
+        currentPassword: passwordForm.current,
+        newPassword: passwordForm.newPass
+      });
+      setPasswordSuccess(true);
+      showToast('Şifrəniz uğurla yeniləndi!', 'success');
+      setTimeout(() => {
+        setPasswordSuccess(false);
+        setIsChangePasswordOpen(false);
+        setPasswordForm({ current: '', newPass: '', confirmPass: '' });
+      }, 1200);
+    } catch (err) {
+      showToast(err.message || 'Şifrə dəyişdirilərkən xəta baş verdi.', 'error');
+    }
+  };
+
+  const handleAddNewUserSubmit = async (e) => {
+    e.preventDefault();
+    if (!isAdmin) {
+      showToast('Yalnız Admin hüququ olan istifadəçilər yeni istifadəçi əlavə edə bilər.', 'error');
+      return;
+    }
+    if (!newUserForm.email) return;
+
+    try {
+      await usersApi.invite({ emails: newUserForm.email, role: newUserForm.role });
+      const updated = await usersApi.getAll();
+      if (Array.isArray(updated)) {
+        setUsersList(updated.map(u => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          initial: (u.name || u.email || 'U').charAt(0).toUpperCase(),
+          role: u.role || 'Admin',
+          isManager: u.isManager
+        })));
+      }
+      showToast('İstifadəçi hesabı və dəvət göndərildi!', 'success');
+      setIsAddUserModalOpen(false);
+      setNewUserForm({ name: '', email: '', role: 'Admin' });
+    } catch (err) {
+      showToast(err.message || 'İstifadəçi yaradılarkən xəta baş verdi.', 'error');
+    }
+  };
+
+  const handleInviteSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!isAdmin) {
+      showToast('Yalnız Admin hüququ olan istifadəçilər istifadəçilərə dəvət göndərə bilər.', 'error');
+      return;
+    }
+    if (!inviteEmails.trim()) return;
+
+    try {
+      await usersApi.invite({ emails: inviteEmails, role: inviteRole });
+      showToast('İstifadəçi(lər)ə dəvət göndərildi və hesabı yaradıldı!', 'success');
+      setInviteEmails('');
+      const updated = await usersApi.getAll();
+      if (Array.isArray(updated)) {
+        setUsersList(updated.map(u => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          initial: (u.name || u.email || 'U').charAt(0).toUpperCase(),
+          role: u.role || 'Admin',
+          isManager: u.isManager
+        })));
+      }
+    } catch (err) {
+      showToast(err.message || 'Dəvət göndərilərkən xəta baş verdi.', 'error');
+    }
   };
 
   const handleAddHomeActionRow = () => {
@@ -305,8 +570,28 @@ const SettingsPage = () => {
               </div>
 
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-[#27272A] border border-[#3F3F46] text-[#A1A1AA] text-lg font-bold flex items-center justify-center shrink-0 shadow-md">
-                  {userProfile.initial}
+                <div className="relative group cursor-pointer shrink-0">
+                  {userProfile.avatarUrl ? (
+                    <img
+                      src={userProfile.avatarUrl.startsWith('http') ? userProfile.avatarUrl : `https://localhost:7114${userProfile.avatarUrl}`}
+                      alt="Avatar"
+                      className="w-14 h-14 rounded-full object-cover border border-[#3F3F46] shadow-md group-hover:opacity-80 transition-opacity"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-[#27272A] border border-[#3F3F46] text-[#A1A1AA] text-lg font-bold flex items-center justify-center shrink-0 shadow-md group-hover:bg-[#3F3F46] transition-colors">
+                      {userProfile.initial}
+                    </div>
+                  )}
+                  <label htmlFor="avatarFileInput" className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <PhotoIcon className="w-5 h-5 text-white" />
+                  </label>
+                  <input
+                    type="file"
+                    id="avatarFileInput"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
                 </div>
 
                 <div className="space-y-0.5">
@@ -513,13 +798,20 @@ const SettingsPage = () => {
                     <div className="relative w-44">
                       <select
                         value={selectedTimezone}
-                        onChange={(e) => setSelectedTimezone(e.target.value)}
+                        onChange={(e) => {
+                          const newTz = e.target.value;
+                          setSelectedTimezone(newTz);
+                          localStorage.setItem('crmTimezone', newTz);
+                          showToast(`Saat qurşağı yeniləndi: ${newTz}`, 'success');
+                        }}
                         className="w-full bg-[#141416] border border-[#2C2C2E] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 appearance-none cursor-pointer"
                       >
-                        <option value="Asia/Baku">Asia/Baku</option>
-                        <option value="UTC">UTC</option>
-                        <option value="America/New_York">America/New_York</option>
-                        <option value="Europe/London">Europe/London</option>
+                        <option value="Asia/Baku">Asia/Baku (GMT+4)</option>
+                        <option value="UTC">UTC (GMT+0)</option>
+                        <option value="America/New_York">America/New_York (EST)</option>
+                        <option value="Europe/London">Europe/London (GMT)</option>
+                        <option value="Europe/Istanbul">Europe/Istanbul (GMT+3)</option>
+                        <option value="Asia/Dubai">Asia/Dubai (GMT+4)</option>
                       </select>
                       <ChevronDownIcon className="w-3.5 h-3.5 text-[#71717A] absolute right-3 top-3 pointer-events-none" />
                     </div>
@@ -937,35 +1229,81 @@ const SettingsPage = () => {
               </div>
 
               <div className="divide-y divide-[#2C2C2E]/60 border-t border-[#2C2C2E]/60 pt-1">
-                {usersList.map((user) => (
+                {loadingUsers ? (
+                  <div className="py-8 text-center text-xs text-[#71717A] flex items-center justify-center gap-2">
+                    <ArrowPathIcon className="w-4 h-4 animate-spin text-sky-400" />
+                    <span>Məlumatlar yüklənir...</span>
+                  </div>
+                ) : usersList.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-[#71717A]">
+                    Hələ heç bir istifadəçi yoxdur. "+ New" düyməsi və ya Invite vasitəsilə əlavə edin.
+                  </div>
+                ) : (
+                  usersList.map((user) => (
                   <div key={user.id} className="flex items-center justify-between py-3 px-1 hover:bg-[#141416]/50 rounded-xl transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-[#27272A] text-[#A1A1AA] text-xs font-bold flex items-center justify-center shrink-0">
-                        {user.initial}
-                      </div>
+                      {user.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl.startsWith('http') ? user.avatarUrl : `https://localhost:7114${user.avatarUrl}`}
+                          alt="Avatar"
+                          className="w-9 h-9 rounded-full object-cover border border-[#3F3F46] shrink-0 shadow-xs"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-[#27272A] text-[#A1A1AA] text-xs font-bold flex items-center justify-center shrink-0">
+                          {user.initial}
+                        </div>
+                      )}
                       <div>
                         <h3 className="font-semibold text-white text-xs">{user.name}</h3>
                         <p className="text-[11px] text-[#71717A]">{user.email}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#27272A]/70 border border-[#3F3F46]/50 text-xs text-white font-medium">
-                        {user.isManager ? (
-                          <BriefcaseIcon className="w-3.5 h-3.5 text-[#A1A1AA]" />
-                        ) : (
+                    <div className="flex items-center gap-3 relative">
+                      {user.role === 'Admin' ? (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#27272A]/70 border border-[#3F3F46]/50 text-xs text-white font-medium">
                           <ShieldCheckIcon className="w-3.5 h-3.5 text-[#A1A1AA]" />
-                        )}
-                        <span>{user.role}</span>
-                        {user.isManager && <ChevronDownIcon className="w-3 h-3 text-[#71717A] ml-1" />}
-                      </div>
+                          <span>Admin</span>
+                        </div>
+                      ) : (
+                        <div className="relative flex items-center">
+                          <select
+                            value={user.role}
+                            onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                            className="bg-[#27272A]/70 border border-[#3F3F46]/50 text-xs text-white font-medium rounded-xl px-3 py-1.5 pr-7 appearance-none cursor-pointer focus:outline-none focus:border-sky-500"
+                          >
+                            <option value="Manager">Manager</option>
+                            <option value="Sales User">Sales User</option>
+                            <option value="Admin">Admin</option>
+                          </select>
+                          <ChevronDownIcon className="w-3 h-3 text-[#71717A] absolute right-2.5 pointer-events-none" />
+                        </div>
+                      )}
 
-                      <button className="text-[#71717A] hover:text-white p-1 rounded-lg transition-colors cursor-pointer">
-                        <EllipsisHorizontalIcon className="w-4 h-4" />
-                      </button>
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenUserMenuId(openUserMenuId === user.id ? null : user.id)}
+                          className="text-[#71717A] hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <EllipsisHorizontalIcon className="w-4 h-4" />
+                        </button>
+
+                        {openUserMenuId === user.id && (
+                          <div className="absolute right-0 top-7 bg-[#1C1C1E] border border-[#2C2C2E] rounded-xl shadow-2xl p-1 z-30 min-w-[130px] animate-in fade-in duration-100">
+                            <button
+                              onClick={() => handleRemoveUser(user.id)}
+                              className="flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-[#27272A] hover:text-red-300 w-full text-left rounded-lg transition-colors cursor-pointer"
+                            >
+                              <TrashIcon className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                              <span>Remove</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                ))}
+                ))
+                )}
               </div>
             </div>
           )}
@@ -982,6 +1320,7 @@ const SettingsPage = () => {
                 </div>
 
                 <button
+                  onClick={handleInviteSubmit}
                   disabled={!inviteEmails.trim()}
                   className={`px-4 py-1.5 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
                     inviteEmails.trim()
@@ -1093,32 +1432,6 @@ const SettingsPage = () => {
             </div>
           )}
 
-          {/* TAB 11: EMAIL TEMPLATES */}
-          {activeTab === 'email_templates' && (
-            <div className="space-y-6 max-w-2xl animate-in fade-in duration-150">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl font-bold text-white tracking-tight">Email Templates</h1>
-                  <p className="text-xs text-[#A1A1AA] mt-1">
-                    Add, edit, and manage email templates for various CRM communications
-                  </p>
-                </div>
-
-                <button className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-bold shadow-md transition-colors cursor-pointer shrink-0">
-                  <PlusIcon className="w-4 h-4 stroke-[2.5]" />
-                  <span>New</span>
-                </button>
-              </div>
-
-              <div className="flex flex-col items-center justify-center py-24 space-y-2 text-center">
-                <div className="p-3.5 rounded-2xl bg-[#141416] border border-[#2C2C2E] text-[#A1A1AA]">
-                  <DocumentDuplicateIcon className="w-8 h-8" />
-                </div>
-                <h2 className="text-base font-bold text-white tracking-tight">No Email Templates Found</h2>
-                <p className="text-xs text-[#71717A]">Add one to get started.</p>
-              </div>
-            </div>
-          )}
 
           {/* TAB 12: ASSIGNMENT RULES (Screenshot 1!) */}
           {activeTab === 'assignment_rules' && (
@@ -1272,6 +1585,318 @@ const SettingsPage = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB: EMAIL TEMPLATES (SCREENSHOTS 3, 4, 5 MATCH 100%) */}
+          {activeTab === 'email_templates' && (
+            <div className="space-y-6 max-w-3xl animate-in fade-in duration-150 text-xs text-[#E4E4E7]">
+              {isEditingTemplate ? (
+                /* NEW / EDIT TEMPLATE FORM (SCREENSHOT 3, 4, 5 MATCH) */
+                <form onSubmit={handleSaveTemplate} className="space-y-6">
+                  
+                  {/* Top Header Bar: Back arrow < New Template, Enabled Toggle, Save Button */}
+                  <div className="flex items-center justify-between border-b border-[#2C2C2E]/60 pb-4">
+                    <div
+                      onClick={() => setIsEditingTemplate(false)}
+                      className="flex items-center gap-2.5 text-white font-bold text-lg cursor-pointer hover:text-sky-400 transition-colors"
+                    >
+                      <span className="text-xl font-mono">&lt;</span>
+                      <span>{templateForm.id ? 'Edit Template' : 'New Template'}</span>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      {/* Enabled Toggle Switch (Screenshot 3 Match) */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setTemplateForm({ ...templateForm, enabled: !templateForm.enabled })}
+                          className={`w-9 h-5 rounded-full transition-colors relative p-0.5 cursor-pointer ${
+                            templateForm.enabled ? 'bg-[#3F3F46]' : 'bg-[#27272A]'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded-full bg-white transition-transform ${templateForm.enabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                        </button>
+                        <span className="text-xs text-[#A1A1AA] font-medium">Enabled</span>
+                      </div>
+
+                      {/* Save Button (Screenshot 3 Match) */}
+                      <button
+                        type="submit"
+                        className="px-4 py-1.5 rounded-xl bg-white hover:bg-zinc-200 text-black font-bold text-xs shadow-md transition-colors cursor-pointer"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Row 1: Name * & For (Dropdown - Screenshot 5 Match) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    
+                    {/* Name * */}
+                    <div className="space-y-1.5">
+                      <label className="text-[#A1A1AA] font-medium flex items-center gap-1">
+                        <span>Name</span>
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Payment Reminder"
+                        value={templateForm.name}
+                        onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
+                        className="w-full bg-[#141416] border border-[#2C2C2E] rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-[#71717A] focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+
+                    {/* For Dropdown (Screenshot 5 Match) */}
+                    <div className="space-y-1.5 relative">
+                      <label className="text-[#A1A1AA] font-medium">For</label>
+                      <div
+                        onClick={() => {
+                          setIsForDropdownOpen(!isForDropdownOpen);
+                          setIsContentTypeDropdownOpen(false);
+                        }}
+                        className="w-full bg-[#141416] border border-[#2C2C2E] rounded-xl px-3.5 py-2.5 text-xs text-white flex items-center justify-between cursor-pointer hover:border-[#3F3F46] transition-colors"
+                      >
+                        <span>{templateForm.forType}</span>
+                        <ChevronDownIcon className="w-3.5 h-3.5 text-[#71717A]" />
+                      </div>
+
+                      {/* Dropdown Options Popover (Screenshot 5 Match) */}
+                      {isForDropdownOpen && (
+                        <div className="absolute top-16 left-0 w-full bg-[#1F1F22] border border-[#2C2C2E] rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in duration-100 space-y-0.5">
+                          {['Deal', 'Lead'].map((typeOption) => (
+                            <div
+                              key={typeOption}
+                              onClick={() => {
+                                setTemplateForm({ ...templateForm, forType: typeOption });
+                                setIsForDropdownOpen(false);
+                              }}
+                              className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-colors ${
+                                templateForm.forType === typeOption
+                                  ? 'bg-[#2C2C2E] text-white font-medium'
+                                  : 'text-[#A1A1AA] hover:bg-[#27272A] hover:text-white'
+                              }`}
+                            >
+                              <span>{typeOption}</span>
+                              {templateForm.forType === typeOption && <CheckIcon className="w-3.5 h-3.5 text-white" />}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+
+                  {/* Row 2: Subject * */}
+                  <div className="space-y-1.5">
+                    <label className="text-[#A1A1AA] font-medium flex items-center gap-1">
+                      <span>Subject</span>
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Payment Reminder from Frappé - (#{{ name }})"
+                      value={templateForm.subject}
+                      onChange={(e) => setTemplateForm({ ...templateForm, subject: e.target.value })}
+                      className="w-full bg-[#141416] border border-[#2C2C2E] rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-[#71717A] focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+
+                  {/* Row 3: Content Type Dropdown (Screenshot 4 Match) */}
+                  <div className="space-y-1.5 relative">
+                    <label className="text-[#A1A1AA] font-medium">Content Type</label>
+                    <div
+                      onClick={() => {
+                        setIsContentTypeDropdownOpen(!isContentTypeDropdownOpen);
+                        setIsForDropdownOpen(false);
+                      }}
+                      className="w-full bg-[#141416] border border-[#2C2C2E] rounded-xl px-3.5 py-2.5 text-xs text-white flex items-center justify-between cursor-pointer hover:border-[#3F3F46] transition-colors"
+                    >
+                      <span>{templateForm.contentType}</span>
+                      <ChevronDownIcon className="w-3.5 h-3.5 text-[#71717A]" />
+                    </div>
+
+                    {/* Dropdown Options Popover (Screenshot 4 Match) */}
+                    {isContentTypeDropdownOpen && (
+                      <div className="absolute top-16 left-0 w-full bg-[#1F1F22] border border-[#2C2C2E] rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in duration-100 space-y-0.5">
+                        {['Rich Text', 'HTML'].map((typeOption) => (
+                          <div
+                            key={typeOption}
+                            onClick={() => {
+                              setTemplateForm({ ...templateForm, contentType: typeOption });
+                              setIsContentTypeDropdownOpen(false);
+                            }}
+                            className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-colors ${
+                              templateForm.contentType === typeOption
+                                ? 'bg-[#2C2C2E] text-white font-medium'
+                                : 'text-[#A1A1AA] hover:bg-[#27272A] hover:text-white'
+                            }`}
+                          >
+                            <span>{typeOption}</span>
+                            {templateForm.contentType === typeOption && <CheckIcon className="w-3.5 h-3.5 text-white" />}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Row 4: Content * */}
+                  <div className="space-y-1.5">
+                    <label className="text-[#A1A1AA] font-medium flex items-center gap-1">
+                      <span>Content</span>
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      rows={8}
+                      placeholder="Dear {{ lead_name }},\n\nThis is a reminder for the payment of {{ grand_total }}.\n\nThanks,\nFrappé"
+                      value={templateForm.content}
+                      onChange={(e) => setTemplateForm({ ...templateForm, content: e.target.value })}
+                      className="w-full bg-[#141416] border border-[#2C2C2E] rounded-2xl p-4 text-xs text-white placeholder:text-[#71717A] focus:outline-none focus:border-sky-500 font-mono resize-none leading-relaxed"
+                    />
+                  </div>
+
+                </form>
+              ) : (
+                /* TEMPLATES LIST TABLE VIEW (SCREENSHOT 1 MATCH 100%) */
+                <div className="space-y-6">
+                  {/* Top Title & + New Button */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-xl font-bold text-white tracking-tight">Email Templates</h1>
+                      <p className="text-xs text-[#A1A1AA] mt-1">
+                        Add, edit, and manage email templates for various CRM communications
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setTemplateForm({
+                          id: null,
+                          name: '',
+                          forType: 'Deal',
+                          subject: '',
+                          contentType: 'Rich Text',
+                          content: '',
+                          enabled: true
+                        });
+                        setIsEditingTemplate(true);
+                      }}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-200 text-black font-bold text-xs shadow-md transition-colors cursor-pointer"
+                    >
+                      <PlusIcon className="w-4 h-4 stroke-[2.5]" />
+                      <span>New</span>
+                    </button>
+                  </div>
+
+                  {/* Table View Matching Screenshot 1 */}
+                  <div className="w-full overflow-hidden rounded-2xl border border-[#2C2C2E]/80 bg-[#141416]/40">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-[#2C2C2E] text-[#71717A] font-semibold bg-[#141416]/80 select-none">
+                          <th className="py-3 px-5 font-medium">Template Name</th>
+                          <th className="py-3 px-5 font-medium">For</th>
+                          <th className="py-3 px-5 font-medium">Enabled</th>
+                          <th className="py-3 px-5 text-right pr-6"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#2C2C2E]/60">
+                        {emailTemplates.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="py-16 text-center text-[#71717A] text-xs">
+                              No templates found. Click "+ New" to create your first email template.
+                            </td>
+                          </tr>
+                        ) : (
+                          emailTemplates.map(tpl => (
+                            <tr
+                              key={tpl.id}
+                              className="hover:bg-[#1C1C1E]/60 transition-colors group"
+                            >
+                              {/* Template Name & Subject Subtitle */}
+                              <td className="py-3.5 px-5">
+                                <div className="space-y-0.5">
+                                  <h4 className="font-bold text-white text-xs">{tpl.name}</h4>
+                                  <p className="text-[#71717A] text-[11px] font-normal">{tpl.subject || 'No subject'}</p>
+                                </div>
+                              </td>
+
+                              {/* For: Deal / Lead */}
+                              <td className="py-3.5 px-5 text-[#A1A1AA] font-medium">
+                                {tpl.forType}
+                              </td>
+
+                              {/* Enabled Toggle (Screenshot 1 Match) */}
+                              <td className="py-3.5 px-5">
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const nextState = !tpl.enabled;
+                                    try {
+                                      await emailTemplatesApi.toggleEnabled(tpl.id);
+                                      const updated = await emailTemplatesApi.getAll();
+                                      if (Array.isArray(updated)) {
+                                        setEmailTemplates(updated);
+                                        saveStoredTemplates(updated);
+                                      }
+                                      showToast(nextState ? 'Template enabled successfully' : 'Template disabled successfully', 'success');
+                                    } catch (err) {
+                                      showToast(err.message || 'Template parametri dəyişdirilərkən xəta baş verdi.', 'error');
+                                    }
+                                  }}
+                                  className={`w-9 h-5 rounded-full transition-colors relative p-0.5 cursor-pointer ${
+                                    tpl.enabled ? 'bg-[#3F3F46]' : 'bg-[#27272A]'
+                                  }`}
+                                >
+                                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${tpl.enabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                </button>
+                              </td>
+
+                              {/* 3 Dots Menu Button */}
+                              <td className="py-3.5 px-5 text-right pr-6">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setTemplateForm(tpl);
+                                      setIsEditingTemplate(true);
+                                    }}
+                                    className="p-1 rounded-lg hover:bg-[#27272A] text-[#A1A1AA] hover:text-white transition-colors cursor-pointer"
+                                    title="Edit"
+                                  >
+                                    <PencilSquareIcon className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await emailTemplatesApi.delete(tpl.id);
+                                        const updated = await emailTemplatesApi.getAll();
+                                        if (Array.isArray(updated)) {
+                                          setEmailTemplates(updated);
+                                          saveStoredTemplates(updated);
+                                        }
+                                        showToast('Template deleted', 'success');
+                                      } catch (err) {
+                                        showToast(err.message || 'Template silinərkən xəta baş verdi.', 'error');
+                                      }
+                                    }}
+                                    className="p-1 rounded-lg hover:bg-red-500/20 text-[#A1A1AA] hover:text-red-400 transition-colors cursor-pointer"
+                                    title="Delete"
+                                  >
+                                    <TrashIcon className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
             </div>
           )}
         </div>
@@ -1445,6 +2070,65 @@ const SettingsPage = () => {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* SOFT FLOATING TOAST NOTIFICATION */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-[120] animate-in fade-in slide-in-from-top-4 duration-200">
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-xl ${
+            toast.type === 'error'
+              ? 'bg-red-950/90 border-red-800/80 text-red-100'
+              : toast.type === 'info'
+              ? 'bg-sky-950/90 border-sky-800/80 text-sky-100'
+              : 'bg-emerald-950/90 border-emerald-800/80 text-emerald-100'
+          }`}>
+            {toast.type === 'error' ? (
+              <ShieldExclamationIcon className="w-5 h-5 text-red-400 shrink-0" />
+            ) : toast.type === 'info' ? (
+              <InformationCircleIcon className="w-5 h-5 text-sky-400 shrink-0" />
+            ) : (
+              <CheckCircleIcon className="w-5 h-5 text-emerald-400 shrink-0" />
+            )}
+            <span className="text-xs font-medium tracking-wide">{toast.message}</span>
+            <button
+              onClick={() => setToast(null)}
+              className="ml-2 text-current opacity-60 hover:opacity-100 transition-opacity p-0.5 cursor-pointer"
+            >
+              <XMarkIcon className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* SOFT DELETE CONFIRMATION MODAL */}
+      {deleteConfirmUserId && (
+        <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#1C1C1E] border border-[#2C2C2E] rounded-3xl shadow-2xl p-6 w-full max-w-sm text-center space-y-4 animate-in fade-in duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-400 flex items-center justify-center mx-auto border border-red-500/20">
+              <TrashIcon className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white tracking-tight">İstifadəçini Sil</h3>
+              <p className="text-xs text-[#A1A1AA] mt-1 leading-relaxed">
+                Bu istifadəçi hesabını silmək istədiyinizdən əminsiniz? Bu əməliyyat geri qaytarıla bilməz.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={() => setDeleteConfirmUserId(null)}
+                className="flex-1 py-2.5 rounded-xl bg-[#27272A] hover:bg-[#3F3F46] text-white text-xs font-semibold border border-[#3F3F46] transition-colors cursor-pointer"
+              >
+                Ləğv Et
+              </button>
+              <button
+                onClick={() => confirmDeleteUser(deleteConfirmUserId)}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-lg shadow-red-600/30 transition-colors cursor-pointer"
+              >
+                Bəli, Sil
+              </button>
+            </div>
           </div>
         </div>
       )}

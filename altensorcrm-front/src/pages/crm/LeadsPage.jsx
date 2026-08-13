@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { leadsApi, orgsApi, contactsApi, notesApi, callLogsApi, usersApi } from '../../services/api';
 import {
   PlusIcon,
@@ -149,13 +149,61 @@ const initialLeads = [];
 
 const LeadsPage = () => {
   const [leads, setLeads] = useState(initialLeads);
+  const [ownersList, setOwnersList] = useState(initialOwnerList);
   const [selectedRows, setSelectedRows] = useState([]);
   const [columns, setColumns] = useState(initialColumns);
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const location = useLocation();
+  const navigateTo = useNavigate();
 
   useEffect(() => {
     fetchBackendLeads();
+    fetchUsers();
   }, []);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchBackendLeads();
+    await fetchUsers();
+    setTimeout(() => setIsRefreshing(false), 400);
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const data = await usersApi.getAll();
+      const list = Array.isArray(data) ? data : (data?.items || data?.data || []);
+      if (Array.isArray(list) && list.length > 0) {
+        setOwnersList(list.map(u => ({
+          id: u.id,
+          name: u.name || u.email || 'User',
+          initial: (u.name || u.email || 'U').charAt(0).toUpperCase(),
+          email: u.email || ''
+        })));
+      }
+    } catch (err) {
+      console.warn('Notice fetching users:', err);
+    }
+  };
+
+  // Auto-redirect to first lead's Comments tab when coming from a comment notification
+  useEffect(() => {
+    if (location.state?.openTab === 'Comments' && location.state?.fromNotification) {
+      const doRedirect = async () => {
+        try {
+          const data = await leadsApi.getAll();
+          const list = data?.items || (Array.isArray(data) ? data : []);
+          if (list.length > 0) {
+            const firstLeadId = list[0].id || list[0].Id;
+            navigateTo(`/crm/leads/${firstLeadId}`, { state: { activeTab: 'Comments' }, replace: true });
+          }
+        } catch (err) {
+          console.warn('Comment redirect notice:', err);
+        }
+      };
+      doRedirect();
+    }
+  }, [location.state]);
 
   const fetchBackendLeads = async () => {
     try {
@@ -201,7 +249,6 @@ const LeadsPage = () => {
   const [employeesList, setEmployeesList] = useState(initialEmployeesList);
   const [territories, setTerritories] = useState(initialTerritories);
   const [industries, setIndustries] = useState(initialIndustries);
-  const [ownersList, setOwnersList] = useState(initialOwnerList);
 
   // Views & Dropdowns
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -861,8 +908,13 @@ const LeadsPage = () => {
 
         {/* Right Actions */}
         <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-          <button className="p-1.5 rounded-xl border border-[#27272A] bg-[#18181B] hover:bg-[#27272A] text-[#A1A1AA] hover:text-white transition-colors cursor-pointer">
-            <ArrowPathIcon className="w-4 h-4" />
+          <button
+            type="button"
+            onClick={handleRefresh}
+            title="Refresh data"
+            className="p-1.5 rounded-xl border border-[#27272A] bg-[#18181B] hover:bg-[#27272A] text-[#A1A1AA] hover:text-white transition-colors cursor-pointer"
+          >
+            <ArrowPathIcon className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-sky-400' : ''}`} />
           </button>
 
           {activeView === 'Kanban' && (

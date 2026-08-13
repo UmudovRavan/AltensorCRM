@@ -24,6 +24,8 @@ public static class PersistenceServiceRegistration
         services.AddScoped<ITaskRepository, TaskRepository>();
         services.AddScoped<INoteRepository, NoteRepository>();
         services.AddScoped<ICallLogRepository, CallLogRepository>();
+        services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>();
+        services.AddScoped<IEmailLogRepository, EmailLogRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 

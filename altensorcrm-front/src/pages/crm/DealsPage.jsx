@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { dealsApi } from '../../services/api';
+import { dealsApi, usersApi } from '../../services/api';
 import {
   PlusIcon,
   ArrowPathIcon,
@@ -152,13 +152,40 @@ const initialDeals = [];
 
 const DealsPage = () => {
   const [deals, setDeals] = useState(initialDeals);
+  const [ownersList, setOwnersList] = useState(initialOwnerList);
   const [selectedRows, setSelectedRows] = useState([]);
   const [columns, setColumns] = useState(initialColumns);
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     fetchBackendDeals();
+    fetchUsers();
   }, []);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchBackendDeals();
+    await fetchUsers();
+    setTimeout(() => setIsRefreshing(false), 400);
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const data = await usersApi.getAll();
+      const list = Array.isArray(data) ? data : (data?.items || data?.data || []);
+      if (Array.isArray(list) && list.length > 0) {
+        setOwnersList(list.map(u => ({
+          id: u.id,
+          name: u.name || u.email || 'User',
+          initial: (u.name || u.email || 'U').charAt(0).toUpperCase(),
+          email: u.email || ''
+        })));
+      }
+    } catch (err) {
+      console.warn('Notice fetching users in DealsPage:', err);
+    }
+  };
 
   const mapDealStatusToEnum = (statusName) => {
     if (!statusName) return 'Qualification';
@@ -224,7 +251,6 @@ const DealsPage = () => {
   const [employeesList, setEmployeesList] = useState(initialEmployeesList);
   const [territories, setTerritories] = useState(initialTerritories);
   const [industries, setIndustries] = useState(initialIndustries);
-  const [ownersList, setOwnersList] = useState(initialOwnerList);
 
   // Views & Dropdowns
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -812,8 +838,13 @@ const DealsPage = () => {
 
         {/* Right Actions */}
         <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-          <button className="p-1.5 rounded-xl border border-[#27272A] bg-[#18181B] hover:bg-[#27272A] text-[#A1A1AA] hover:text-white transition-colors cursor-pointer">
-            <ArrowPathIcon className="w-4 h-4" />
+          <button
+            type="button"
+            onClick={handleRefresh}
+            title="Refresh data"
+            className="p-1.5 rounded-xl border border-[#27272A] bg-[#18181B] hover:bg-[#27272A] text-[#A1A1AA] hover:text-white transition-colors cursor-pointer"
+          >
+            <ArrowPathIcon className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-sky-400' : ''}`} />
           </button>
 
           {activeView === 'Kanban' && (

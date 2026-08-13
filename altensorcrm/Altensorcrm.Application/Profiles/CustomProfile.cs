@@ -133,5 +133,14 @@ public class CustomProfile : Profile
         CreateMap<Contract.DTOs.Product.CreateProductDto, Domain.Entity.Product>();
         CreateMap<Contract.DTOs.Product.UpdateProductDto, Domain.Entity.Product>()
             .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+
+        // EmailTemplate Mappings
+        CreateMap<Domain.Entity.EmailTemplate, Contract.DTOs.EmailTemplate.EmailTemplateDetailDto>().ReverseMap();
+        CreateMap<Contract.DTOs.EmailTemplate.CreateEmailTemplateDto, Domain.Entity.EmailTemplate>();
+        CreateMap<Contract.DTOs.EmailTemplate.UpdateEmailTemplateDto, Domain.Entity.EmailTemplate>()
+            .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+
+        // EmailLog Mappings
+        CreateMap<Domain.Entity.EmailLog, Contract.DTOs.Email.EmailLogDetailDto>().ReverseMap();
     }
 }

@@ -1,21 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authApi, setAuthToken, setCurrentUser } from '../services/api';
 import altensorLogo from '../assets/Altensor-Logo.png';
 import crmHeroPreview from '../assets/crm_hero_preview.png';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('admin@altensor.io');
-  const [password, setPassword] = useState('password123');
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('Password123!');
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const token = searchParams.get('token');
+    if (token) {
+      setAuthToken(token);
+      setCurrentUser({ username: 'Invited User', role: 'User' });
+      navigate('/desktop', { replace: true });
+    }
+  }, [navigate]);
+
+  const handleLogin = async (e) => {
     if (e) e.preventDefault();
-    console.log('Test Login Successful:', { email, password });
-    localStorage.setItem('token', 'demo-test-token');
-    localStorage.setItem('currentUser', JSON.stringify({ username: 'Administrator', email, role: 'Admin' }));
-    // Navigate directly to Enterprise Workspace desktop page for easy testing
-    navigate('/desktop');
+    setError('');
+    setLoading(true);
+    try {
+      await authApi.login(username, password);
+      navigate('/desktop');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.message || 'Giriş uğursuz oldu. İstifadəçi adı və ya şifrə yanlışdır.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -84,10 +103,16 @@ const LoginPage = () => {
 
           {/* Form */}
           <form onSubmit={handleLogin} className="flex flex-col gap-lg w-full">
-            {/* Email Input */}
+            {error && (
+              <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200">
+                {error}
+              </div>
+            )}
+
+            {/* Username / Email Input */}
             <div className="flex flex-col gap-xs">
-              <label className="font-label-sm text-label-sm text-on-surface-variant sr-only" htmlFor="email">
-                Email
+              <label className="font-label-sm text-label-sm text-on-surface-variant sr-only" htmlFor="username">
+                Username or Email
               </label>
               <div className="relative flex items-center h-14 rounded-xl input-border bg-white transition-all duration-200">
                 <span className="material-symbols-outlined absolute left-md text-outline-variant" style={{ fontVariationSettings: "'FILL' 0" }}>
@@ -95,11 +120,11 @@ const LoginPage = () => {
                 </span>
                 <input
                   className="w-full h-full pl-12 pr-md bg-transparent border-none focus:ring-0 font-body-md text-on-surface placeholder:text-outline-variant outline-none"
-                  id="email"
-                  placeholder="Email address"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  placeholder="Username or Email"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                 />
               </div>
             </div>
@@ -143,10 +168,11 @@ const LoginPage = () => {
             {/* Actions */}
             <div className="flex flex-col gap-md mt-sm">
               <button
-                className="h-14 w-full bg-[#0F172A] hover:bg-[#1E293B] text-white rounded-full font-label-sm text-label-sm font-bold shadow-[0_4px_14px_0_rgba(15,23,42,0.15)] hover:shadow-[0_6px_20px_rgba(15,23,42,0.2)] transition-all duration-300 cursor-pointer"
+                disabled={loading}
+                className="h-14 w-full bg-[#0F172A] hover:bg-[#1E293B] disabled:opacity-50 text-white rounded-full font-label-sm text-label-sm font-bold shadow-[0_4px_14px_0_rgba(15,23,42,0.15)] hover:shadow-[0_6px_20px_rgba(15,23,42,0.2)] transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
                 type="submit"
               >
-                Sign In
+                {loading ? 'Daxil olunur...' : 'Sign In'}
               </button>
             </div>
           </form>

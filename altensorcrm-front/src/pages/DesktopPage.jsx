@@ -3,14 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Bell,
-  Pencil,
   Moon,
-  Info,
-  Headphones,
-  RotateCcw,
+  Sun,
   LogOut,
-  Trash2,
-  CreditCard,
   Box,
   Filter,
   Ticket,
@@ -25,9 +20,11 @@ import {
   Archive,
   RefreshCw,
   Settings,
-  Users
+  Users,
+  CheckSquare
 } from 'lucide-react';
 import altensorLogo from '../assets/Altensor-Logo.png';
+import { getAuthToken, usersApi } from '../services/api';
 
 const appsList = [
   {
@@ -38,10 +35,12 @@ const appsList = [
     route: '/crm/dashboard'
   },
   {
-    id: 'framework',
-    name: 'Framework',
-    icon: Box,
-    bgClass: 'bg-[#475569] text-white shadow-sm',
+    id: 'tasks',
+    name: 'Task Management',
+    icon: CheckSquare,
+    isTaskLogo: true,
+    bgClass: 'bg-white border border-slate-200 shadow-sm',
+    externalRoute: 'http://31.57.77.199:8081/dashboard'
   },
   {
     id: 'crm',
@@ -133,8 +132,37 @@ const appsList = [
 const DesktopPage = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem('desktopTheme') === 'dark';
+  });
+  const [userProfile, setUserProfile] = useState({
+    name: 'User',
+    initial: 'U',
+    avatarUrl: null
+  });
+
   const menuRef = useRef(null);
   const navigate = useNavigate();
+
+  // Load current user profile for header avatar
+  useEffect(() => {
+    const fetchMe = async () => {
+      try {
+        const me = await usersApi.getMe();
+        if (me) {
+          const profileName = me.name || `${me.firstName || ''} ${me.lastName || ''}`.trim() || me.email || 'User';
+          setUserProfile({
+            name: profileName,
+            initial: profileName.charAt(0).toUpperCase() || 'U',
+            avatarUrl: me.avatarUrl || null
+          });
+        }
+      } catch (err) {
+        console.warn('Notice loading current user profile for Desktop:', err);
+      }
+    };
+    fetchMe();
+  }, []);
 
   // Close user dropdown menu when clicking outside
   useEffect(() => {
@@ -147,12 +175,24 @@ const DesktopPage = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const toggleTheme = () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    localStorage.setItem('desktopTheme', newMode ? 'dark' : 'light');
+  };
+
   const filteredApps = appsList.filter((app) =>
     app.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleAppClick = (app) => {
-    if (app.route) {
+    if (app.externalRoute) {
+      const token = getAuthToken() || localStorage.getItem('token') || '';
+      const targetUrl = token
+        ? `${app.externalRoute}?token=${encodeURIComponent(token)}`
+        : app.externalRoute;
+      window.open(targetUrl, '_blank');
+    } else if (app.route) {
       window.open(app.route, '_blank');
     } else {
       console.log(`Opening app: ${app.name}`);
@@ -160,13 +200,19 @@ const DesktopPage = () => {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('currentUser');
     navigate('/login');
   };
 
   return (
-    <div className="bg-white min-h-screen text-slate-800 font-sans flex flex-col antialiased selection:bg-indigo-100">
+    <div className={`min-h-screen font-sans flex flex-col antialiased transition-colors duration-200 ${
+      isDarkMode ? 'bg-[#0F172A] text-slate-100 selection:bg-indigo-900' : 'bg-white text-slate-800 selection:bg-indigo-100'
+    }`}>
       {/* Top Navbar */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100">
+      <header className={`sticky top-0 z-50 backdrop-blur-md border-b transition-colors ${
+        isDarkMode ? 'bg-[#0F172A]/90 border-slate-800/80' : 'bg-white/90 border-slate-100'
+      }`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Left: Brand Logo */}
           <div className="flex items-center gap-3">
@@ -182,9 +228,15 @@ const DesktopPage = () => {
                 placeholder="Search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#F3F4F6] hover:bg-[#EEF2F6] focus:bg-white text-slate-700 text-sm rounded-full pl-10 pr-16 py-2 border border-transparent focus:border-slate-200 focus:outline-none transition-all placeholder:text-slate-400"
+                className={`w-full text-sm rounded-full pl-10 pr-16 py-2 border transition-all placeholder:text-slate-400 focus:outline-none ${
+                  isDarkMode
+                    ? 'bg-[#1E293B] text-white border-transparent focus:border-slate-700'
+                    : 'bg-[#F3F4F6] text-slate-700 hover:bg-[#EEF2F6] focus:bg-white border-transparent focus:border-slate-200'
+                }`}
               />
-              <span className="absolute right-3 text-[11px] font-medium text-slate-400 bg-white/60 px-1.5 py-0.5 rounded border border-slate-200/60 pointer-events-none">
+              <span className={`absolute right-3 text-[11px] font-medium px-1.5 py-0.5 rounded border pointer-events-none ${
+                isDarkMode ? 'text-slate-400 bg-slate-800/60 border-slate-700' : 'text-slate-400 bg-white/60 border-slate-200/60'
+              }`}>
                 Ctrl+K
               </span>
             </div>
@@ -192,84 +244,57 @@ const DesktopPage = () => {
 
           {/* Right: Actions & User Avatar Dropdown */}
           <div className="flex items-center gap-4 relative" ref={menuRef}>
-            <button className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors relative cursor-pointer">
+            <button className={`p-2 rounded-full transition-colors relative cursor-pointer ${
+              isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+            }`}>
               <Bell className="w-5 h-5 stroke-[1.75]" />
             </button>
 
-            {/* Profile Avatar "A" */}
+            {/* Profile Avatar */}
             <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="w-8 h-8 rounded-full bg-[#DCFCE7] text-[#15803D] font-semibold text-sm flex items-center justify-center hover:ring-2 hover:ring-emerald-200 transition-all cursor-pointer shadow-sm"
+              className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center cursor-pointer shadow-sm hover:ring-2 hover:ring-emerald-200 transition-all shrink-0 border border-slate-200/40"
               id="userMenuBtn"
             >
-              A
+              {userProfile.avatarUrl ? (
+                <img
+                  src={userProfile.avatarUrl.startsWith('http') ? userProfile.avatarUrl : `https://localhost:7114${userProfile.avatarUrl}`}
+                  alt="Avatar"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-[#DCFCE7] text-[#15803D] font-semibold text-sm flex items-center justify-center">
+                  {userProfile.initial}
+                </div>
+              )}
             </button>
 
-            {/* Dropdown Menu (Matching Reference Image 2) */}
+            {/* Clean Dropdown Menu */}
             {isUserMenuOpen && (
-              <div className="absolute top-12 right-0 w-64 bg-white rounded-2xl border border-slate-100 shadow-xl p-2 z-50 flex flex-col gap-0.5 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className={`absolute top-12 right-0 w-56 rounded-2xl border shadow-xl p-2 z-50 flex flex-col gap-1 animate-in fade-in slide-in-from-top-2 duration-150 ${
+                isDarkMode ? 'bg-[#1C1C1E] border-[#2C2C2E] text-white' : 'bg-white border-slate-100 text-slate-700'
+              }`}>
                 <button
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-normal transition-colors text-left"
+                  onClick={() => {
+                    toggleTheme();
+                    setIsUserMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors text-left cursor-pointer ${
+                    isDarkMode ? 'hover:bg-[#27272A] text-slate-200' : 'hover:bg-slate-50 text-slate-700'
+                  }`}
                 >
-                  <Pencil className="w-4 h-4 text-slate-400" />
-                  <span>Edit Profile</span>
-                </button>
-
-                <button
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-normal transition-colors text-left"
-                >
-                  <Moon className="w-4 h-4 text-slate-400" />
-                  <span>Toggle Theme</span>
-                </button>
-
-                <button
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-normal transition-colors text-left"
-                >
-                  <Info className="w-4 h-4 text-slate-400" />
-                  <span>About</span>
-                </button>
-
-                <button
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-normal transition-colors text-left"
-                >
-                  <Headphones className="w-4 h-4 text-slate-400" />
-                  <span>Altensor Support</span>
-                </button>
-
-                <button
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-normal transition-colors text-left"
-                >
-                  <RotateCcw className="w-4 h-4 text-slate-400" />
-                  <span>Reset Desktop Layout</span>
+                  {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-400" />}
+                  <span>{isDarkMode ? 'Light Theme' : 'Toggle Theme'}</span>
                 </button>
 
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-normal transition-colors text-left"
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors text-left cursor-pointer ${
+                    isDarkMode ? 'hover:bg-[#27272A] text-red-400' : 'hover:bg-slate-50 text-red-600'
+                  }`}
                 >
-                  <LogOut className="w-4 h-4 text-slate-400" />
+                  <LogOut className="w-4 h-4" />
                   <span>Logout</span>
-                </button>
-
-                <button
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-normal transition-colors text-left"
-                >
-                  <Trash2 className="w-4 h-4 text-slate-400" />
-                  <span>Delete Demo Data</span>
-                </button>
-
-                <button
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-normal transition-colors text-left"
-                >
-                  <CreditCard className="w-4 h-4 text-slate-400" />
-                  <span>Manage Billing</span>
                 </button>
               </div>
             )}
@@ -277,7 +302,7 @@ const DesktopPage = () => {
         </div>
       </header>
 
-      {/* Main Workspace Area (Matching Reference Image 1) */}
+      {/* Main Workspace Area */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-16 flex flex-col items-center justify-start">
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-x-8 gap-y-10 w-full justify-items-center">
           {filteredApps.map((app) => {
@@ -294,6 +319,13 @@ const DesktopPage = () => {
                 >
                   {app.isLogo ? (
                     <img src={altensorLogo} alt="Altensor" className="w-10 h-10 object-contain" />
+                  ) : app.isTaskLogo ? (
+                    <div className="relative flex items-center justify-center">
+                      <img src={altensorLogo} alt="Task Management" className="w-9 h-9 object-contain opacity-90" />
+                      <span className="absolute -bottom-1 -right-1 w-5.5 h-5.5 rounded-full bg-sky-500 border-2 border-white flex items-center justify-center shadow-xs">
+                        <CheckSquare className="w-3 h-3 text-white stroke-[2.5]" />
+                      </span>
+                    </div>
                   ) : app.isAccountingGrid ? (
                     <div className="grid grid-cols-2 gap-1.5 p-3">
                       <div className="w-3.5 h-3.5 rounded bg-sky-500"></div>
@@ -307,7 +339,9 @@ const DesktopPage = () => {
                 </div>
 
                 {/* Icon Label */}
-                <span className="mt-2.5 text-xs sm:text-[13px] font-semibold text-slate-700 text-center tracking-tight truncate w-full group-hover:text-slate-900 transition-colors">
+                <span className={`mt-2.5 text-xs sm:text-[13px] font-semibold text-center tracking-tight truncate w-full transition-colors ${
+                  isDarkMode ? 'text-slate-300 group-hover:text-white' : 'text-slate-700 group-hover:text-slate-900'
+                }`}>
                   {app.name}
                 </span>
               </div>

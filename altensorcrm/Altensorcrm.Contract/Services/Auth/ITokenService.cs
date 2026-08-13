@@ -1,6 +1,9 @@
+using Altensorcrm.Domain.Entity;
+
 namespace Altensorcrm.Contract.Services.Auth;
 
 public interface ITokenService
 {
-    (string Token, DateTime Expiration) GenerateToken(Domain.Entity.User user);
+    Task<string> GenerateTokenAsync(AppUser user);
+    (string Token, DateTime Expiration) GenerateToken(AppUser user);
 }

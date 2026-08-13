@@ -23,6 +23,7 @@ import {
   MoonIcon
 } from '@heroicons/react/24/outline';
 import { useTheme } from '../../context/ThemeContext';
+import { authApi, taskManagementApi } from '../../services/api';
 import altensorLogo from '../../assets/Altensor-Logo.png';
 
 const menuItems = [
@@ -90,13 +91,31 @@ const desktopApps = [
   }
 ];
 
-const CrmSidebar = () => {
+const CrmSidebar = ({ isNotificationsOpen, onToggleNotifications, onCollapseChange }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isBrandMenuOpen, setIsBrandMenuOpen] = useState(false);
   const [isAppsSubmenuOpen, setIsAppsSubmenuOpen] = useState(false);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const brandMenuRef = useRef(null);
   const navigate = useNavigate();
   const { theme, setTheme, isDark } = useTheme();
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const data = await taskManagementApi.getNotifications();
+        if (Array.isArray(data)) {
+          const unread = data.filter(n => !n.isRead).length;
+          setUnreadNotificationsCount(unread);
+        }
+      } catch (err) {
+        // silent
+      }
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Close brand dropdown when clicking outside
   useEffect(() => {
@@ -110,8 +129,13 @@ const CrmSidebar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsBrandMenuOpen(false);
+    try {
+      await authApi.logout();
+    } catch (err) {
+      console.warn('Logout notice:', err);
+    }
     navigate('/login');
   };
 
@@ -240,12 +264,50 @@ const CrmSidebar = () => {
         <nav className="flex flex-col gap-0.5">
           {menuItems.map((item) => {
             const Icon = item.icon;
+            const isNotificationItem = item.path === '/crm/notifications';
+
+            if (isNotificationItem) {
+              return (
+                <button
+                  key={item.path}
+                  type="button"
+                  onClick={onToggleNotifications}
+                  className={`flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-[13px] font-normal transition-colors relative w-full text-left cursor-pointer ${
+                    isCollapsed ? 'justify-center px-0 py-2' : ''
+                  } ${
+                    isNotificationsOpen
+                      ? 'bg-[#27272A] text-white font-medium shadow-xs'
+                      : 'text-[#A1A1AA] hover:bg-white/[0.04] hover:text-white'
+                  }`}
+                  title={isCollapsed ? item.label : undefined}
+                >
+                  <div className="relative">
+                    <Icon className="w-[18px] h-[18px] stroke-[1.75] shrink-0 text-[#A1A1AA]" />
+                    {unreadNotificationsCount > 0 && isCollapsed && (
+                      <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-fuchsia-500 animate-pulse"></span>
+                    )}
+                  </div>
+
+                  {!isCollapsed && (
+                    <div className="flex items-center justify-between w-full min-w-0">
+                      <span className="truncate">{item.label}</span>
+                      {unreadNotificationsCount > 0 && (
+                        <span className="px-1.5 py-0.2 rounded-full bg-fuchsia-500/20 text-fuchsia-400 text-[10px] font-bold border border-fuchsia-500/30">
+                          {unreadNotificationsCount}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </button>
+              );
+            }
+
             return (
               <NavLink
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-[13px] font-normal transition-colors ${
+                  `flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-[13px] font-normal transition-colors relative ${
                     isCollapsed ? 'justify-center px-0 py-2' : ''
                   } ${
                     isActive
@@ -255,8 +317,15 @@ const CrmSidebar = () => {
                 }
                 title={isCollapsed ? item.label : undefined}
               >
-                <Icon className="w-[18px] h-[18px] stroke-[1.75] shrink-0 text-[#A1A1AA]" />
-                {!isCollapsed && <span className="truncate">{item.label}</span>}
+                <div className="relative">
+                  <Icon className="w-[18px] h-[18px] stroke-[1.75] shrink-0 text-[#A1A1AA]" />
+                </div>
+
+                {!isCollapsed && (
+                  <div className="flex items-center justify-between w-full min-w-0">
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                )}
               </NavLink>
             );
           })}
@@ -283,7 +352,11 @@ const CrmSidebar = () => {
         </NavLink>
 
         <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={() => {
+            const nextState = !isCollapsed;
+            setIsCollapsed(nextState);
+            if (onCollapseChange) onCollapseChange(nextState);
+          }}
           className={`flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-[13px] font-normal text-[#A1A1AA] hover:bg-white/[0.04] hover:text-white transition-colors cursor-pointer ${
             isCollapsed ? 'justify-center px-0 py-2' : ''
           }`}

@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { leadsApi, orgsApi, contactsApi } from '../../services/api';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
+import { leadsApi, orgsApi, contactsApi, taskManagementApi, getCurrentUser, usersApi } from '../../services/api';
+import { formatAppDate } from '../../utils/dateUtils';
+import TaskWidget from '../../components/crm/TaskWidget';
+import EmailWidget from '../../components/crm/EmailWidget';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -45,7 +48,7 @@ const salutationOptions = ['Dr', 'Madam', 'Master', 'Miss', 'Mr', 'Mrs', 'Ms'];
 const industryOptions = ['Banking', 'Chemical', 'Accounting', 'Consulting', 'Computer', 'Advertising', 'Aerospace', 'Agriculture'];
 const territoryOptions = ['Azerbaijan', 'Turkey', 'United States', 'Global'];
 const sourceOptions = ['Website', 'Referral', 'Social Media', 'Cold Call', 'Event'];
-const ownerList = [
+const initialOwnerList = [
   { name: 'Elvin Muzaffarli', initial: 'E', email: 'elvinmuzaffarli@gmail.com' },
   { name: 'Administrator', initial: 'A', email: 'admin@altensor.io' },
   { name: 'Yusif Hashimov', initial: 'Y', email: 'yusif@altensor.io' }
@@ -54,11 +57,145 @@ const ownerList = [
 const LeadDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const [ownerList, setOwnerList] = useState(initialOwnerList);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const data = await usersApi.getAll();
+        const list = Array.isArray(data) ? data : (data?.items || data?.data || []);
+        if (Array.isArray(list) && list.length > 0) {
+          setOwnerList(list.map(u => ({
+            id: u.id,
+            name: u.name || u.email || 'User',
+            initial: (u.name || u.email || 'U').charAt(0).toUpperCase(),
+            email: u.email || ''
+          })));
+        }
+      } catch (err) {
+        console.warn('Notice fetching users:', err);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [converting, setConverting] = useState(false);
-  const [activeTab, setActiveTab] = useState('Data');
+  // If navigated from a comment notification, auto-open Comments tab
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'Data');
+
+  // Task Management Comments & Mention State
+  const [leadComments, setLeadComments] = useState([]);
+  const [newCommentInput, setNewCommentInput] = useState('');
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [associatedTaskId, setAssociatedTaskId] = useState(null);
+
+  const [mentionUsers, setMentionUsers] = useState([]);
+  const [showMentionPopover, setShowMentionPopover] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+
+  useEffect(() => {
+    const loadTaskCommentsAndUsers = async () => {
+      try {
+        const users = await taskManagementApi.getAllUsers();
+        if (Array.isArray(users)) {
+          setMentionUsers(users.map(u => ({
+            id: u.id || u.Id,
+            userName: u.userName || u.name || u.email,
+            email: u.email || ''
+          })));
+        }
+
+        const tasks = await taskManagementApi.getAllTasks();
+        if (Array.isArray(tasks) && tasks.length > 0) {
+          const firstTaskId = tasks[0].id || tasks[0].Id;
+          setAssociatedTaskId(firstTaskId);
+          try {
+            const taskDetail = await taskManagementApi.getTaskById(firstTaskId);
+            if (taskDetail && taskDetail.taskComments) {
+              setLeadComments(taskDetail.taskComments);
+            }
+          } catch {
+            // fallback
+          }
+        }
+      } catch (err) {
+        console.warn('Comments load notice:', err);
+      }
+    };
+    loadTaskCommentsAndUsers();
+  }, []);
+
+  const handleCommentInputChange = (e) => {
+    const val = e.target.value;
+    setNewCommentInput(val);
+
+    const cursorPos = e.target.selectionStart;
+    const textBeforeCursor = val.slice(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+    if (lastAtIndex !== -1) {
+      const query = textBeforeCursor.slice(lastAtIndex + 1);
+      if (!query.includes(' ')) {
+        setMentionQuery(query);
+        setShowMentionPopover(true);
+        return;
+      }
+    }
+    setShowMentionPopover(false);
+  };
+
+  const handleSelectMentionUser = (userName) => {
+    const lastAtIndex = newCommentInput.lastIndexOf('@');
+    if (lastAtIndex !== -1) {
+      const textBeforeAt = newCommentInput.slice(0, lastAtIndex);
+      const updatedText = `${textBeforeAt}@${userName} `;
+      setNewCommentInput(updatedText);
+    }
+    setShowMentionPopover(false);
+  };
+
+  const handlePostTaskComment = async (e) => {
+    e.preventDefault();
+    if (!newCommentInput.trim()) return;
+
+    setCommentSubmitting(true);
+    try {
+      let targetId = associatedTaskId;
+      if (!targetId) {
+        // If no task exists, create one dynamically
+        const currentUser = getCurrentUser();
+        const newTask = await taskManagementApi.createTask({
+          title: `Lead Activity Task`,
+          description: `Activity task for Lead`,
+          difficulty: 1,
+          status: 0,
+          createdByUserId: currentUser?.userId || currentUser?.id || ''
+        });
+        targetId = newTask.id || newTask.Id;
+        setAssociatedTaskId(targetId);
+      }
+
+      await taskManagementApi.addComment(targetId, newCommentInput.trim());
+      const currentUser = getCurrentUser();
+      const newCommentObj = {
+        id: Date.now(),
+        content: newCommentInput.trim(),
+        user: { userName: currentUser?.userName || currentUser?.name || 'Administrator' },
+        createAt: new Date().toISOString()
+      };
+      setLeadComments([newCommentObj, ...leadComments]);
+      setNewCommentInput('');
+      showToast('Şərh əlavə olundu VƏ bildiriş göndərildi!', 'success');
+    } catch (err) {
+      showToast('Şərh əlavə edilərkən xəta baş verdi.', 'error');
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
 
   // Custom Floating Toast Alert State (Matching Screenshot!)
   const [toast, setToast] = useState(null);
@@ -492,65 +629,186 @@ const LeadDetailPage = () => {
               </>
             )}
 
-            {/* 2. EMAILS TAB (Screenshot 2 Match!) */}
+            {/* 2. EMAILS TAB */}
             {activeTab === 'Emails' && (
-              <>
-                <div className="flex items-center justify-between border-b border-[#2C2C2E]/40 pb-3.5">
-                  <h1 className="text-xl font-bold text-white tracking-tight">Emails</h1>
-                  <button
-                    type="button"
-                    className="flex items-center gap-1.5 bg-[#1C1C1E] border border-[#2C2C2E] hover:border-[#3F3F46] px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-colors cursor-pointer"
-                  >
-                    <span>+ New Email</span>
-                  </button>
-                </div>
-
-                <div className="py-16 flex flex-col items-center justify-center text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-[#1C1C1E] border border-[#2C2C2E] flex items-center justify-center text-[#71717A]">
-                    <EnvelopeIcon className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-sm font-bold text-white mt-3">No Emails Found</h3>
-                  <p className="text-xs text-[#A1A1AA] max-w-sm mt-1">
-                    No emails found in your inbox. New messages will appear here soon.
-                  </p>
-                </div>
-              </>
+              <EmailWidget
+                leadId={id}
+                entityName={fullName}
+                defaultToEmail={formData.email || ''}
+                referenceCode={`#CRM-LEAD-2026-${(id || '00017').padStart(5, '0')}`}
+                onSwitchToComments={() => setActiveTab('Comments')}
+              />
             )}
 
-            {/* 3. COMMENTS TAB (Screenshot 3 Match!) */}
+            {/* 3. COMMENTS TAB (EXACT MATCH TO USER SCREENSHOT) */}
             {activeTab === 'Comments' && (
-              <>
-                <div className="flex items-center justify-between border-b border-[#2C2C2E]/40 pb-3.5">
+              <div className="space-y-6 flex flex-col justify-between h-full min-h-[500px]">
+                
+                {/* Top Header */}
+                <div className="flex items-center justify-between border-b border-[#2C2C2E]/40 pb-3.5 shrink-0">
                   <h1 className="text-xl font-bold text-white tracking-tight">Comments</h1>
                   <button
                     type="button"
-                    className="flex items-center gap-1.5 bg-[#1C1C1E] border border-[#2C2C2E] hover:border-[#3F3F46] px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-colors cursor-pointer"
+                    onClick={() => {
+                      const commentBox = document.getElementById('lead-comment-input');
+                      if (commentBox) commentBox.focus();
+                    }}
+                    className="flex items-center gap-1.5 bg-white hover:bg-zinc-200 text-black px-4 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-md"
                   >
                     <span>+ New Comment</span>
                   </button>
                 </div>
 
-                <div className="space-y-4 text-xs">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <ChatBubbleLeftIcon className="w-4 h-4 text-[#A1A1AA]" />
-                        <span className="w-4 h-4 rounded-full bg-[#27272A] text-white text-[9px] font-bold flex items-center justify-center">A</span>
-                        <span className="font-semibold text-white">Administrator</span>
-                        <span className="text-[#A1A1AA]">added a <strong className="text-white">comment</strong></span>
+                {/* Timeline & Comments List */}
+                <div className="flex-1 overflow-y-auto space-y-6 pr-1 relative">
+                  {/* Timeline Vertical Connector Line */}
+                  {leadComments.length > 0 && (
+                    <div className="w-px bg-[#27272A] absolute left-2.5 top-3 bottom-4 -z-0"></div>
+                  )}
+
+                  {leadComments.length === 0 ? (
+                    <div className="py-16 text-center text-[#71717A] text-xs">
+                      Hələ ki şərh yoxdur. Aşağıdakı bölmədən ilk şərhinizi yazın!
+                    </div>
+                  ) : (
+                    leadComments.map((c) => {
+                      const authorName = c.user?.userName || c.userName || 'Elvin Muzaffarli';
+                      const initial = authorName.charAt(0).toUpperCase();
+                      const dateStr = c.createAt ? formatAppDate(c.createAt) : 'Just now';
+                      return (
+                        <div key={c.id || Math.random()} className="space-y-2 relative z-10 pl-8">
+                          {/* Timeline Dot & Icon */}
+                          <div className="absolute left-0 top-0.5 flex items-center justify-center w-5 h-5 bg-[#141416] text-[#A1A1AA]">
+                            <ChatBubbleLeftIcon className="w-4 h-4 stroke-[1.75]" />
+                          </div>
+
+                          {/* Comment Header */}
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2">
+                              { (c.user?.avatarUrl || c.avatarUrl) ? (
+                                <img
+                                  src={(c.user?.avatarUrl || c.avatarUrl).startsWith('http') ? (c.user?.avatarUrl || c.avatarUrl) : `https://localhost:7114${c.user?.avatarUrl || c.avatarUrl}`}
+                                  alt="Avatar"
+                                  className="w-5 h-5 rounded-full object-cover border border-[#3F3F46] shrink-0"
+                                />
+                              ) : (
+                                <div className="w-5 h-5 rounded-full bg-[#27272A] text-[#A1A1AA] text-[10px] font-bold flex items-center justify-center shrink-0">
+                                  {initial}
+                                </div>
+                              )}
+                              <span className="font-semibold text-white">{authorName}</span>
+                              <span className="text-[#A1A1AA]">added a <strong className="text-white font-semibold">comment</strong></span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] text-[#71717A]">
+                              <span>{dateStr}</span>
+                              <span className="cursor-pointer hover:text-white">···</span>
+                            </div>
+                          </div>
+
+                          {/* Comment Body Card (Matching Screenshot!) */}
+                          <div className="bg-[#1C1C1E] border border-[#2C2C2E] rounded-2xl p-4 text-xs text-[#E4E4E7] font-medium leading-relaxed shadow-sm">
+                            {c.content || c.Content}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Bottom Fixed Comment Editor Card (Matching Screenshot!) */}
+                <form onSubmit={handlePostTaskComment} className="bg-[#141416] border border-[#27272A] rounded-2xl p-3 space-y-3 relative shrink-0 shadow-2xl">
+                  
+                  {/* Tabs Toolbar: Reply & Comment */}
+                  <div className="flex items-center gap-2 border-b border-[#27272A]/80 pb-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('Emails')}
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs text-[#71717A] hover:text-white transition-colors cursor-pointer"
+                    >
+                      <EnvelopeIcon className="w-3.5 h-3.5" />
+                      <span>Reply</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs bg-[#27272A] border border-[#3F3F46]/60 text-white font-semibold shadow-xs"
+                    >
+                      <ChatBubbleLeftIcon className="w-3.5 h-3.5 text-sky-400" />
+                      <span>Comment</span>
+                    </button>
+                  </div>
+
+                  {/* Textarea Input + @ Mention Popover */}
+                  <div className="relative">
+                    <textarea
+                      id="lead-comment-input"
+                      rows={3}
+                      placeholder="@John, can you please check this?"
+                      value={newCommentInput}
+                      onChange={handleCommentInputChange}
+                      className="w-full bg-transparent p-2 text-xs text-white placeholder:text-[#52525B] focus:outline-none resize-none"
+                    />
+
+                    {/* @ Mention Popover Dropdown (Instagram Style) */}
+                    {showMentionPopover && (
+                      <div className="absolute left-0 bottom-full mb-2 bg-[#1C1C1E] border border-[#2C2C2E] rounded-2xl shadow-2xl p-1.5 z-50 w-60 max-h-48 overflow-y-auto space-y-0.5 animate-in fade-in duration-100">
+                        <div className="px-2.5 py-1 text-[10px] font-bold text-[#71717A] uppercase tracking-wider">
+                          Etiketləmək üçün istifadəçi seçin
+                        </div>
+                        {mentionUsers
+                          .filter(u => u.userName.toLowerCase().includes(mentionQuery.toLowerCase()))
+                          .map(u => (
+                            <div
+                              key={u.id}
+                              onClick={() => handleSelectMentionUser(u.userName)}
+                              className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#2C2C2E] text-white cursor-pointer transition-colors"
+                            >
+                              <div className="w-5 h-5 rounded-full bg-[#27272A] text-sky-400 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                {u.userName.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-semibold text-white truncate">@{u.userName}</span>
+                                {u.email && <span className="text-[10px] text-[#71717A] truncate">{u.email}</span>}
+                              </div>
+                            </div>
+                          ))}
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-[#71717A]">
-                        <span>just now</span>
-                        <span>···</span>
-                      </div>
+                    )}
+                  </div>
+
+                  {/* Bottom Action Footer (Icons Left + Discard/Comment Right) */}
+                  <div className="flex items-center justify-between pt-1 border-t border-[#27272A]/80">
+                    <div className="flex items-center gap-2 text-[#71717A]">
+                      <button type="button" className="hover:text-white p-1 rounded-lg hover:bg-[#27272A] transition-colors cursor-pointer text-sm">
+                        🙂
+                      </button>
+                      <button type="button" className="hover:text-white p-1 rounded-lg hover:bg-[#27272A] transition-colors cursor-pointer">
+                        <PaperClipIcon className="w-4 h-4" />
+                      </button>
                     </div>
 
-                    <div className="bg-[#1C1C1E] border border-[#2C2C2E]/60 rounded-2xl p-4 text-xs text-[#E4E4E7] font-medium">
-                      Saalam
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setNewCommentInput('')}
+                        className="px-3.5 py-1.5 rounded-xl bg-[#1C1C1E] border border-[#2C2C2E] hover:bg-[#27272A] text-[#A1A1AA] hover:text-white text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        Discard
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={commentSubmitting || !newCommentInput.trim()}
+                        className="px-4 py-1.5 rounded-xl bg-[#27272A] border border-[#3F3F46] hover:bg-white hover:text-black text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {commentSubmitting ? 'Posting...' : 'Comment'}
+                      </button>
                     </div>
                   </div>
-                </div>
-              </>
+
+                </form>
+
+              </div>
             )}
 
             {/* 4. DATA TAB (Image 2 Match!) */}
@@ -800,25 +1058,7 @@ const LeadDetailPage = () => {
             {/* 6. TASKS TAB */}
             {activeTab === 'Tasks' && (
               <>
-                <div className="flex items-center justify-between border-b border-[#2C2C2E]/40 pb-3.5">
-                  <h1 className="text-xl font-bold text-white tracking-tight">Tasks</h1>
-                  <button
-                    type="button"
-                    className="flex items-center gap-1.5 bg-[#1C1C1E] border border-[#2C2C2E] hover:border-[#3F3F46] px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-colors cursor-pointer"
-                  >
-                    <span>+ New Task</span>
-                  </button>
-                </div>
-
-                <div className="py-16 flex flex-col items-center justify-center text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-[#1C1C1E] border border-[#2C2C2E] flex items-center justify-center text-[#71717A]">
-                    <CheckCircleIcon className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-sm font-bold text-white mt-3">No Tasks Found</h3>
-                  <p className="text-xs text-[#A1A1AA] max-w-sm mt-1">
-                    Nothing here for now. Create tasks to manage your to-dos.
-                  </p>
-                </div>
+                <TaskWidget />
               </>
             )}
 
@@ -875,11 +1115,19 @@ const LeadDetailPage = () => {
 
           {/* Bottom Fixed Action Bar (Screenshots 1, 2, 3, 4, 5 Match!) */}
           <div className="pt-4 border-t border-[#2C2C2E]/60 flex items-center gap-6 text-xs text-[#A1A1AA] font-medium shrink-0">
-            <button type="button" className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer">
+            <button
+              type="button"
+              onClick={() => setActiveTab('Emails')}
+              className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer"
+            >
               <EnvelopeIcon className="w-4 h-4" />
               <span>Reply</span>
             </button>
-            <button type="button" className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer">
+            <button
+              type="button"
+              onClick={() => setActiveTab('Comments')}
+              className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer"
+            >
               <ChatBubbleLeftIcon className="w-4 h-4" />
               <span>Comment</span>
             </button>

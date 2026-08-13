@@ -1,44 +1,65 @@
-using Altensorcrm.Application.Common.Security;
 using Altensorcrm.Application.Exceptions;
 using Altensorcrm.Contract.DTOs.Auth;
 using Altensorcrm.Contract.Services.Auth;
-using Altensorcrm.Domain.Repository;
+using Altensorcrm.Domain.Entity;
+using Microsoft.AspNetCore.Identity;
 
 namespace Altensorcrm.Application.Services.Auth;
 
 public class AuthService : IAuthService
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly UserManager<AppUser> _userManager;
+    private readonly RoleManager<IdentityRole<Guid>> _roleManager;
+    private readonly SignInManager<AppUser> _signInManager;
     private readonly ITokenService _tokenService;
 
-    public AuthService(IUnitOfWork unitOfWork, ITokenService tokenService)
+    public AuthService(
+        UserManager<AppUser> userManager,
+        RoleManager<IdentityRole<Guid>> roleManager,
+        SignInManager<AppUser> signInManager,
+        ITokenService tokenService)
     {
-        _unitOfWork = unitOfWork;
+        _userManager = userManager;
+        _roleManager = roleManager;
+        _signInManager = signInManager;
         _tokenService = tokenService;
     }
 
-    public async Task<LoginResponseDto> LoginAsync(LoginRequestDto dto, CancellationToken cancellationToken = default)
+    public async System.Threading.Tasks.Task<LoginResponseDto> LoginAsync(LoginRequestDto dto, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
         {
             throw new ValidationException("Username and Password are required.");
         }
 
-        var userRepo = _unitOfWork.Repository<Domain.Entity.User>();
-        var users = await userRepo.FindAsync(
-            u => u.Username.ToLower() == dto.Username.Trim().ToLower(), cancellationToken);
+        var searchTerm = dto.Username.Trim();
 
-        var user = users.FirstOrDefault();
+        var user = await _userManager.FindByEmailAsync(searchTerm)
+                   ?? await _userManager.FindByNameAsync(searchTerm);
+
         if (user is null || !user.IsActive)
         {
             throw new BusinessRuleException("Invalid username or password.");
         }
 
-        bool isPasswordValid = PasswordHasher.VerifyPassword(dto.Password, user.PasswordHash);
+        var isPasswordValid = await _userManager.CheckPasswordAsync(user, dto.Password);
         if (!isPasswordValid)
         {
             throw new BusinessRuleException("Invalid username or password.");
         }
+
+        var userRoles = await _userManager.GetRolesAsync(user);
+        if (userRoles.Count == 0)
+        {
+            if (!await _roleManager.RoleExistsAsync("Admin"))
+            {
+                await _roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
+            }
+            await _userManager.AddToRoleAsync(user, "Admin");
+            userRoles = await _userManager.GetRolesAsync(user);
+        }
+
+        var mainRole = userRoles.FirstOrDefault() ?? "Admin";
 
         var (token, expiration) = _tokenService.GenerateToken(user);
         var fullName = $"{user.FirstName} {user.LastName}".Trim();
@@ -47,80 +68,85 @@ public class AuthService : IAuthService
             token,
             expiration,
             user.Id,
-            user.Username,
+            user.UserName ?? user.Email ?? string.Empty,
             fullName,
-            user.Email,
+            user.Email ?? string.Empty,
+            mainRole,
             user.Department
         );
     }
 
-    public async Task<bool> RegisterUserAsync(RegisterUserDto dto, CancellationToken cancellationToken = default)
+    public async System.Threading.Tasks.Task<bool> RegisterUserAsync(RegisterUserDto dto, CancellationToken cancellationToken = default)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password) || string.IsNullOrWhiteSpace(dto.Email))
         {
             throw new ValidationException("Username, Email, and Password are required.");
         }
 
-        var userRepo = _unitOfWork.Repository<Domain.Entity.User>();
-
-        var existingUsername = await userRepo.ExistsAsync(
-            u => u.Username.ToLower() == dto.Username.Trim().ToLower(), cancellationToken);
-        if (existingUsername)
+        var existingUserByName = await _userManager.FindByNameAsync(dto.Username.Trim());
+        if (existingUserByName is not null)
         {
             throw new ValidationException("Username is already taken.");
         }
 
-        var existingEmail = await userRepo.ExistsAsync(
-            u => u.Email.ToLower() == dto.Email.Trim().ToLower(), cancellationToken);
-        if (existingEmail)
+        var existingUserByEmail = await _userManager.FindByEmailAsync(dto.Email.Trim());
+        if (existingUserByEmail is not null)
         {
             throw new ValidationException("Email is already taken.");
         }
 
-        var passwordHash = PasswordHasher.HashPassword(dto.Password);
-
-        var newUser = new Domain.Entity.User
+        var newUser = new AppUser
         {
             Id = Guid.NewGuid(),
-            Username = dto.Username.Trim(),
-            PasswordHash = passwordHash,
+            UserName = dto.Username.Trim(),
+            Email = dto.Email.Trim(),
             FirstName = dto.FirstName?.Trim() ?? string.Empty,
             LastName = dto.LastName?.Trim() ?? string.Empty,
-            Email = dto.Email.Trim(),
             Department = dto.Department,
             IsActive = true
         };
 
-        await userRepo.AddAsync(newUser, cancellationToken);
-        var result = await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return result > 0;
+        var result = await _userManager.CreateAsync(newUser, dto.Password);
+        if (!result.Succeeded)
+        {
+            var errorMsg = string.Join("; ", result.Errors.Select(e => e.Description));
+            throw new ValidationException(errorMsg);
+        }
+
+        if (!await _roleManager.RoleExistsAsync("Admin"))
+        {
+            await _roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
+        }
+        await _userManager.AddToRoleAsync(newUser, "Admin");
+
+        return true;
     }
 
-    public async Task<bool> ChangePasswordAsync(ChangePasswordDto dto, CancellationToken cancellationToken = default)
+    public async System.Threading.Tasks.Task<bool> ChangePasswordAsync(ChangePasswordDto dto, CancellationToken cancellationToken = default)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.CurrentPassword) || string.IsNullOrWhiteSpace(dto.NewPassword))
         {
             throw new ValidationException("Current Password and New Password are required.");
         }
 
-        var userRepo = _unitOfWork.Repository<Domain.Entity.User>();
-        var user = await userRepo.GetByIdAsync(dto.UserId, cancellationToken);
-
+        var user = await _userManager.FindByIdAsync(dto.UserId.ToString());
         if (user is null)
         {
-            throw new NotFoundException(nameof(Domain.Entity.User), dto.UserId);
+            throw new NotFoundException(nameof(AppUser), dto.UserId);
         }
 
-        bool isCurrentValid = PasswordHasher.VerifyPassword(dto.CurrentPassword, user.PasswordHash);
-        if (!isCurrentValid)
+        var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+        if (!result.Succeeded)
         {
-            throw new BusinessRuleException("Current password is incorrect.");
+            var errorMsg = string.Join("; ", result.Errors.Select(e => e.Description));
+            throw new BusinessRuleException(errorMsg);
         }
 
-        user.PasswordHash = PasswordHasher.HashPassword(dto.NewPassword);
-        userRepo.Update(user);
+        return true;
+    }
 
-        var result = await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return result > 0;
+    public async System.Threading.Tasks.Task LogoutAsync()
+    {
+        await _signInManager.SignOutAsync();
     }
 }

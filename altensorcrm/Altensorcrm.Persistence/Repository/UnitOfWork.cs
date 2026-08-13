@@ -19,6 +19,8 @@ public class UnitOfWork : IUnitOfWork
     public ITaskRepository Tasks { get; }
     public INoteRepository Notes { get; }
     public ICallLogRepository CallLogs { get; }
+    public IEmailTemplateRepository EmailTemplates { get; }
+    public IEmailLogRepository EmailLogs { get; }
 
     public UnitOfWork(
         AppDbContext context,
@@ -28,7 +30,9 @@ public class UnitOfWork : IUnitOfWork
         IOrganizationRepository organizations,
         ITaskRepository tasks,
         INoteRepository notes,
-        ICallLogRepository callLogs)
+        ICallLogRepository callLogs,
+        IEmailTemplateRepository emailTemplates,
+        IEmailLogRepository emailLogs)
     {
         _context = context;
         Leads = leads;
@@ -38,6 +42,8 @@ public class UnitOfWork : IUnitOfWork
         Tasks = tasks;
         Notes = notes;
         CallLogs = callLogs;
+        EmailTemplates = emailTemplates;
+        EmailLogs = emailLogs;
     }
 
     public IGenericRepository<TEntity> Repository<TEntity>() where TEntity : class

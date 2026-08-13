@@ -47,7 +47,9 @@ namespace Altensorcrm.Application.Extentions
             services.AddScoped<ILayoutService, LayoutService>();
             services.AddScoped<ICustomViewService, CustomViewService>();
             services.AddScoped<ISettingService, SettingService>();
+            services.AddScoped<Altensorcrm.Contract.Services.Email.IEmailService, Altensorcrm.Application.Services.Email.EmailService>();
             services.AddScoped<Altensorcrm.Contract.Services.Product.IProductService, Altensorcrm.Application.Services.Product.ProductService>();
+            services.AddScoped<Altensorcrm.Contract.Services.EmailTemplate.IEmailTemplateService, Altensorcrm.Application.Services.EmailTemplate.EmailTemplateService>();
 
             return services;
         }

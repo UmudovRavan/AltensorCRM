@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LoginPage from '../pages/LoginPage';
 import DesktopPage from '../pages/DesktopPage';
 import CrmLayout from '../layouts/CrmLayout';
@@ -13,40 +13,95 @@ import ContactDetailPage from '../pages/crm/ContactDetailPage';
 import OrganizationsPage from '../pages/crm/OrganizationsPage';
 import OrganizationDetailPage from '../pages/crm/OrganizationDetailPage';
 import NotesPage from '../pages/crm/NotesPage';
+import TasksPage from '../pages/crm/TasksPage';
 import CallLogsPage from '../pages/crm/CallLogsPage';
+import NotificationsPage from '../pages/crm/NotificationsPage';
 import SettingsPage from '../pages/crm/SettingsPage';
+
+const PageTitleHandler = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname.toLowerCase();
+
+    if (path === '/' || path === '/login') {
+      document.title = 'Altensor - Sign In';
+    } else if (path === '/desktop' || path === '/workspace') {
+      document.title = 'Altensor - Desktop';
+    } else if (path.startsWith('/crm/leads/')) {
+      document.title = 'Altensor CRM - Lead Details';
+    } else if (path === '/crm/leads') {
+      document.title = 'Altensor CRM - Leads';
+    } else if (path.startsWith('/crm/deals/')) {
+      document.title = 'Altensor CRM - Deal Details';
+    } else if (path === '/crm/deals') {
+      document.title = 'Altensor CRM - Deals';
+    } else if (path.startsWith('/crm/contacts/')) {
+      document.title = 'Altensor CRM - Contact Details';
+    } else if (path === '/crm/contacts') {
+      document.title = 'Altensor CRM - Contacts';
+    } else if (path.startsWith('/crm/organizations/')) {
+      document.title = 'Altensor CRM - Organization Details';
+    } else if (path === '/crm/organizations') {
+      document.title = 'Altensor CRM - Organizations';
+    } else if (path === '/crm/dashboard') {
+      document.title = 'Altensor CRM - Dashboard';
+    } else if (path === '/crm/notes') {
+      document.title = 'Altensor CRM - Notes';
+    } else if (path === '/crm/tasks') {
+      document.title = 'Altensor CRM - Tasks';
+    } else if (path === '/crm/call-logs') {
+      document.title = 'Altensor CRM - Call Logs';
+    } else if (path === '/crm/notifications') {
+      document.title = 'Altensor CRM - Notifications';
+    } else if (path === '/crm/settings') {
+      document.title = 'Altensor CRM - Settings';
+    } else if (path.startsWith('/crm')) {
+      document.title = 'Altensor CRM';
+    } else {
+      document.title = 'Altensor';
+    }
+  }, [location.pathname]);
+
+  return null;
+};
 
 export const AppRoutes = () => {
   return (
-    <Routes>
-      {/* Site Entry Route: Login */}
-      <Route path="/" element={<LoginPage />} />
-      <Route path="/login" element={<LoginPage />} />
+    <>
+      <PageTitleHandler />
+      <Routes>
+        {/* Site Entry Route: Login */}
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/login" element={<LoginPage />} />
 
-      {/* Enterprise Workspace Desktop / Launchpad */}
-      <Route path="/desktop" element={<DesktopPage />} />
-      <Route path="/workspace" element={<DesktopPage />} />
+        {/* Enterprise Workspace Desktop / Launchpad */}
+        <Route path="/desktop" element={<DesktopPage />} />
+        <Route path="/workspace" element={<DesktopPage />} />
 
-      {/* Altensor CRM Module Sub-Routes */}
-      <Route path="/crm" element={<CrmLayout />}>
-        <Route index element={<Navigate to="/crm/dashboard" replace />} />
-        <Route path="dashboard" element={<CrmDashboardPage />} />
-        <Route path="leads" element={<LeadsPage />} />
-        <Route path="leads/:id" element={<LeadDetailPage />} />
-        <Route path="deals" element={<DealsPage />} />
-        <Route path="deals/:id" element={<DealDetailPage />} />
-        <Route path="contacts" element={<ContactsPage />} />
-        <Route path="contacts/:id" element={<ContactDetailPage />} />
-        <Route path="organizations" element={<OrganizationsPage />} />
-        <Route path="organizations/:id" element={<OrganizationDetailPage />} />
-        <Route path="notes" element={<NotesPage />} />
-        <Route path="call-logs" element={<CallLogsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-      </Route>
+        {/* Altensor CRM Module Sub-Routes */}
+        <Route path="/crm" element={<CrmLayout />}>
+          <Route index element={<Navigate to="/crm/dashboard" replace />} />
+          <Route path="notifications" element={<Navigate to="/crm/dashboard" replace />} />
+          <Route path="dashboard" element={<CrmDashboardPage />} />
+          <Route path="leads" element={<LeadsPage />} />
+          <Route path="leads/:id" element={<LeadDetailPage />} />
+          <Route path="deals" element={<DealsPage />} />
+          <Route path="deals/:id" element={<DealDetailPage />} />
+          <Route path="contacts" element={<ContactsPage />} />
+          <Route path="contacts/:id" element={<ContactDetailPage />} />
+          <Route path="organizations" element={<OrganizationsPage />} />
+          <Route path="organizations/:id" element={<OrganizationDetailPage />} />
+          <Route path="notes" element={<NotesPage />} />
+          <Route path="tasks" element={<TasksPage />} />
+          <Route path="call-logs" element={<CallLogsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
 
-      {/* Catch-all redirect to login */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Catch-all redirect to login */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 };
 

@@ -23,3 +23,15 @@ c:\Users\Ravan999\Desktop\Altensor\altensorcrm\Altensorcrm.Domain\obj\Debug\net8
 c:\Users\Ravan999\Desktop\Altensor\altensorcrm\Altensorcrm.Domain\obj\Debug\net8.0\refint\Altensorcrm.Domain.dll
 c:\Users\Ravan999\Desktop\Altensor\altensorcrm\Altensorcrm.Domain\obj\Debug\net8.0\Altensorcrm.Domain.pdb
 c:\Users\Ravan999\Desktop\Altensor\altensorcrm\Altensorcrm.Domain\obj\Debug\net8.0\ref\Altensorcrm.Domain.dll
+C:\Users\Ravan999\Desktop\altensorcrm-front\backend\Altensorcrm.Domain\bin\Debug\net8.0\Altensorcrm.Domain.deps.json
+C:\Users\Ravan999\Desktop\altensorcrm-front\backend\Altensorcrm.Domain\bin\Debug\net8.0\Altensorcrm.Domain.dll
+C:\Users\Ravan999\Desktop\altensorcrm-front\backend\Altensorcrm.Domain\bin\Debug\net8.0\Altensorcrm.Domain.pdb
+C:\Users\Ravan999\Desktop\altensorcrm-front\backend\Altensorcrm.Domain\obj\Debug\net8.0\Altensorcrm.Domain.csproj.AssemblyReference.cache
+C:\Users\Ravan999\Desktop\altensorcrm-front\backend\Altensorcrm.Domain\obj\Debug\net8.0\Altensorcrm.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Ravan999\Desktop\altensorcrm-front\backend\Altensorcrm.Domain\obj\Debug\net8.0\Altensorcrm.Domain.AssemblyInfoInputs.cache
+C:\Users\Ravan999\Desktop\altensorcrm-front\backend\Altensorcrm.Domain\obj\Debug\net8.0\Altensorcrm.Domain.AssemblyInfo.cs
+C:\Users\Ravan999\Desktop\altensorcrm-front\backend\Altensorcrm.Domain\obj\Debug\net8.0\Altensorcrm.Domain.csproj.CoreCompileInputs.cache
+C:\Users\Ravan999\Desktop\altensorcrm-front\backend\Altensorcrm.Domain\obj\Debug\net8.0\Altensorcrm.Domain.dll
+C:\Users\Ravan999\Desktop\altensorcrm-front\backend\Altensorcrm.Domain\obj\Debug\net8.0\refint\Altensorcrm.Domain.dll
+C:\Users\Ravan999\Desktop\altensorcrm-front\backend\Altensorcrm.Domain\obj\Debug\net8.0\Altensorcrm.Domain.pdb
+C:\Users\Ravan999\Desktop\altensorcrm-front\backend\Altensorcrm.Domain\obj\Debug\net8.0\ref\Altensorcrm.Domain.dll
