@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { authApi, setAuthToken, setCurrentUser } from '../services/api';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import altensorLogo from '../assets/Altensor-Logo.png';
 import crmHeroPreview from '../assets/crm_hero_preview.png';
 
@@ -11,24 +11,24 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login, isAuthenticated, authChecked } = useAuth();
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const token = searchParams.get('token');
-    if (token) {
-      setAuthToken(token);
-      setCurrentUser({ username: 'Invited User', role: 'User' });
-      navigate('/desktop', { replace: true });
+    if (authChecked && isAuthenticated) {
+      const from = location.state?.from?.pathname || '/desktop';
+      navigate(from, { replace: true });
     }
-  }, [navigate]);
+  }, [authChecked, isAuthenticated, navigate, location]);
 
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await authApi.login(username, password);
-      navigate('/desktop');
+      await login(username, password);
+      const from = location.state?.from?.pathname || '/desktop';
+      navigate(from, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Giriş uğursuz oldu. İstifadəçi adı və ya şifrə yanlışdır.');

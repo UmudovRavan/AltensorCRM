@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import ProtectedRoute from '../components/ProtectedRoute';
 import LoginPage from '../pages/LoginPage';
 import DesktopPage from '../pages/DesktopPage';
 import CrmLayout from '../layouts/CrmLayout';
@@ -44,11 +45,11 @@ const PageTitleHandler = () => {
       document.title = 'Altensor CRM - Organization Details';
     } else if (path === '/crm/organizations') {
       document.title = 'Altensor CRM - Organizations';
-    } else if (path === '/crm/dashboard') {
+    } else if (path === '/crm/dashboard' || path === '/dashboard') {
       document.title = 'Altensor CRM - Dashboard';
     } else if (path === '/crm/notes') {
       document.title = 'Altensor CRM - Notes';
-    } else if (path === '/crm/tasks') {
+    } else if (path === '/crm/tasks' || path === '/tasks') {
       document.title = 'Altensor CRM - Tasks';
     } else if (path === '/crm/call-logs') {
       document.title = 'Altensor CRM - Call Logs';
@@ -76,11 +77,50 @@ export const AppRoutes = () => {
         <Route path="/login" element={<LoginPage />} />
 
         {/* Enterprise Workspace Desktop / Launchpad */}
-        <Route path="/desktop" element={<DesktopPage />} />
-        <Route path="/workspace" element={<DesktopPage />} />
+        <Route
+          path="/desktop"
+          element={
+            <ProtectedRoute>
+              <DesktopPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/workspace"
+          element={
+            <ProtectedRoute>
+              <DesktopPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Direct Route Aliases (e.g. /dashboard?token=... or /tasks?token=...) */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Navigate to="/crm/dashboard" replace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tasks"
+          element={
+            <ProtectedRoute>
+              <Navigate to="/crm/tasks" replace />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Altensor CRM Module Sub-Routes */}
-        <Route path="/crm" element={<CrmLayout />}>
+        <Route
+          path="/crm"
+          element={
+            <ProtectedRoute>
+              <CrmLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<Navigate to="/crm/dashboard" replace />} />
           <Route path="notifications" element={<Navigate to="/crm/dashboard" replace />} />
           <Route path="dashboard" element={<CrmDashboardPage />} />

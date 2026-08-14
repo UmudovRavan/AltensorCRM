@@ -188,12 +188,14 @@ const DesktopPage = () => {
   const handleAppClick = (app) => {
     if (app.externalRoute) {
       const token = getAuthToken() || localStorage.getItem('token') || '';
-      const targetUrl = token
-        ? `${app.externalRoute}?token=${encodeURIComponent(token)}`
-        : app.externalRoute;
-      window.open(targetUrl, '_blank');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+      const targetUrl = `${app.externalRoute}?token=${encodeURIComponent(token)}`;
+      window.location.href = targetUrl; // eyni tab, popup blocker riski yoxdur
     } else if (app.route) {
-      window.open(app.route, '_blank');
+      navigate(app.route);
     } else {
       console.log(`Opening app: ${app.name}`);
     }
@@ -206,13 +208,11 @@ const DesktopPage = () => {
   };
 
   return (
-    <div className={`min-h-screen font-sans flex flex-col antialiased transition-colors duration-200 ${
-      isDarkMode ? 'bg-[#0F172A] text-slate-100 selection:bg-indigo-900' : 'bg-white text-slate-800 selection:bg-indigo-100'
-    }`}>
-      {/* Top Navbar */}
-      <header className={`sticky top-0 z-50 backdrop-blur-md border-b transition-colors ${
-        isDarkMode ? 'bg-[#0F172A]/90 border-slate-800/80' : 'bg-white/90 border-slate-100'
+    <div className={`min-h-screen font-sans flex flex-col antialiased transition-colors duration-200 ${isDarkMode ? 'bg-[#0F172A] text-slate-100 selection:bg-indigo-900' : 'bg-white text-slate-800 selection:bg-indigo-100'
       }`}>
+      {/* Top Navbar */}
+      <header className={`sticky top-0 z-50 backdrop-blur-md border-b transition-colors ${isDarkMode ? 'bg-[#0F172A]/90 border-slate-800/80' : 'bg-white/90 border-slate-100'
+        }`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Left: Brand Logo */}
           <div className="flex items-center gap-3">
@@ -228,15 +228,13 @@ const DesktopPage = () => {
                 placeholder="Search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full text-sm rounded-full pl-10 pr-16 py-2 border transition-all placeholder:text-slate-400 focus:outline-none ${
-                  isDarkMode
-                    ? 'bg-[#1E293B] text-white border-transparent focus:border-slate-700'
-                    : 'bg-[#F3F4F6] text-slate-700 hover:bg-[#EEF2F6] focus:bg-white border-transparent focus:border-slate-200'
-                }`}
+                className={`w-full text-sm rounded-full pl-10 pr-16 py-2 border transition-all placeholder:text-slate-400 focus:outline-none ${isDarkMode
+                  ? 'bg-[#1E293B] text-white border-transparent focus:border-slate-700'
+                  : 'bg-[#F3F4F6] text-slate-700 hover:bg-[#EEF2F6] focus:bg-white border-transparent focus:border-slate-200'
+                  }`}
               />
-              <span className={`absolute right-3 text-[11px] font-medium px-1.5 py-0.5 rounded border pointer-events-none ${
-                isDarkMode ? 'text-slate-400 bg-slate-800/60 border-slate-700' : 'text-slate-400 bg-white/60 border-slate-200/60'
-              }`}>
+              <span className={`absolute right-3 text-[11px] font-medium px-1.5 py-0.5 rounded border pointer-events-none ${isDarkMode ? 'text-slate-400 bg-slate-800/60 border-slate-700' : 'text-slate-400 bg-white/60 border-slate-200/60'
+                }`}>
                 Ctrl+K
               </span>
             </div>
@@ -244,9 +242,8 @@ const DesktopPage = () => {
 
           {/* Right: Actions & User Avatar Dropdown */}
           <div className="flex items-center gap-4 relative" ref={menuRef}>
-            <button className={`p-2 rounded-full transition-colors relative cursor-pointer ${
-              isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
-            }`}>
+            <button className={`p-2 rounded-full transition-colors relative cursor-pointer ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+              }`}>
               <Bell className="w-5 h-5 stroke-[1.75]" />
             </button>
 
@@ -271,17 +268,15 @@ const DesktopPage = () => {
 
             {/* Clean Dropdown Menu */}
             {isUserMenuOpen && (
-              <div className={`absolute top-12 right-0 w-56 rounded-2xl border shadow-xl p-2 z-50 flex flex-col gap-1 animate-in fade-in slide-in-from-top-2 duration-150 ${
-                isDarkMode ? 'bg-[#1C1C1E] border-[#2C2C2E] text-white' : 'bg-white border-slate-100 text-slate-700'
-              }`}>
+              <div className={`absolute top-12 right-0 w-56 rounded-2xl border shadow-xl p-2 z-50 flex flex-col gap-1 animate-in fade-in slide-in-from-top-2 duration-150 ${isDarkMode ? 'bg-[#1C1C1E] border-[#2C2C2E] text-white' : 'bg-white border-slate-100 text-slate-700'
+                }`}>
                 <button
                   onClick={() => {
                     toggleTheme();
                     setIsUserMenuOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors text-left cursor-pointer ${
-                    isDarkMode ? 'hover:bg-[#27272A] text-slate-200' : 'hover:bg-slate-50 text-slate-700'
-                  }`}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors text-left cursor-pointer ${isDarkMode ? 'hover:bg-[#27272A] text-slate-200' : 'hover:bg-slate-50 text-slate-700'
+                    }`}
                 >
                   {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-400" />}
                   <span>{isDarkMode ? 'Light Theme' : 'Toggle Theme'}</span>
@@ -289,9 +284,8 @@ const DesktopPage = () => {
 
                 <button
                   onClick={handleLogout}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors text-left cursor-pointer ${
-                    isDarkMode ? 'hover:bg-[#27272A] text-red-400' : 'hover:bg-slate-50 text-red-600'
-                  }`}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors text-left cursor-pointer ${isDarkMode ? 'hover:bg-[#27272A] text-red-400' : 'hover:bg-slate-50 text-red-600'
+                    }`}
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Logout</span>
@@ -339,9 +333,8 @@ const DesktopPage = () => {
                 </div>
 
                 {/* Icon Label */}
-                <span className={`mt-2.5 text-xs sm:text-[13px] font-semibold text-center tracking-tight truncate w-full transition-colors ${
-                  isDarkMode ? 'text-slate-300 group-hover:text-white' : 'text-slate-700 group-hover:text-slate-900'
-                }`}>
+                <span className={`mt-2.5 text-xs sm:text-[13px] font-semibold text-center tracking-tight truncate w-full transition-colors ${isDarkMode ? 'text-slate-300 group-hover:text-white' : 'text-slate-700 group-hover:text-slate-900'
+                  }`}>
                   {app.name}
                 </span>
               </div>

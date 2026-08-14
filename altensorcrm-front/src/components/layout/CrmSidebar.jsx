@@ -151,9 +151,8 @@ const CrmSidebar = ({ isNotificationsOpen, onToggleNotifications, onCollapseChan
 
   return (
     <aside
-      className={`${
-        isCollapsed ? 'w-16' : 'w-56'
-      } bg-[#18181B] text-[#A1A1AA] border-r border-[#27272A] min-h-screen flex flex-col justify-between p-2.5 transition-all duration-200 select-none z-40 selection:bg-fuchsia-500/30 shrink-0`}
+      className={`${isCollapsed ? 'w-16' : 'w-56'
+        } bg-[#18181B] text-[#A1A1AA] border-r border-[#27272A] min-h-screen flex flex-col justify-between p-2.5 transition-all duration-200 select-none z-40 selection:bg-fuchsia-500/30 shrink-0`}
     >
       {/* Top Section */}
       <div className="flex flex-col gap-3">
@@ -161,9 +160,8 @@ const CrmSidebar = ({ isNotificationsOpen, onToggleNotifications, onCollapseChan
         <div className="relative" ref={brandMenuRef}>
           <div
             onClick={() => setIsBrandMenuOpen(!isBrandMenuOpen)}
-            className={`flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.06] transition-all cursor-pointer ${
-              isBrandMenuOpen ? 'bg-white/[0.08]' : ''
-            } ${isCollapsed ? 'justify-center p-1.5' : ''}`}
+            className={`flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.06] transition-all cursor-pointer ${isBrandMenuOpen ? 'bg-white/[0.08]' : ''
+              } ${isCollapsed ? 'justify-center p-1.5' : ''}`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
               {/* iOS Magenta Squircle Icon */}
@@ -272,13 +270,11 @@ const CrmSidebar = ({ isNotificationsOpen, onToggleNotifications, onCollapseChan
                   key={item.path}
                   type="button"
                   onClick={onToggleNotifications}
-                  className={`flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-[13px] font-normal transition-colors relative w-full text-left cursor-pointer ${
-                    isCollapsed ? 'justify-center px-0 py-2' : ''
-                  } ${
-                    isNotificationsOpen
+                  className={`flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-[13px] font-normal transition-colors relative w-full text-left cursor-pointer ${isCollapsed ? 'justify-center px-0 py-2' : ''
+                    } ${isNotificationsOpen
                       ? 'bg-[#27272A] text-white font-medium shadow-xs'
                       : 'text-[#A1A1AA] hover:bg-white/[0.04] hover:text-white'
-                  }`}
+                    }`}
                   title={isCollapsed ? item.label : undefined}
                 >
                   <div className="relative">
@@ -307,12 +303,10 @@ const CrmSidebar = ({ isNotificationsOpen, onToggleNotifications, onCollapseChan
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-[13px] font-normal transition-colors relative ${
-                    isCollapsed ? 'justify-center px-0 py-2' : ''
-                  } ${
-                    isActive
-                      ? 'bg-[#27272A] text-white font-medium shadow-xs'
-                      : 'text-[#A1A1AA] hover:bg-white/[0.04] hover:text-white'
+                  `flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-[13px] font-normal transition-colors relative ${isCollapsed ? 'justify-center px-0 py-2' : ''
+                  } ${isActive
+                    ? 'bg-[#27272A] text-white font-medium shadow-xs'
+                    : 'text-[#A1A1AA] hover:bg-white/[0.04] hover:text-white'
                   }`
                 }
                 title={isCollapsed ? item.label : undefined}
@@ -337,12 +331,10 @@ const CrmSidebar = ({ isNotificationsOpen, onToggleNotifications, onCollapseChan
         <NavLink
           to="/crm/help"
           className={({ isActive }) =>
-            `flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-[13px] font-normal transition-colors ${
-              isCollapsed ? 'justify-center px-0 py-2' : ''
-            } ${
-              isActive
-                ? 'bg-[#27272A] text-white font-medium'
-                : 'text-[#A1A1AA] hover:bg-white/[0.04] hover:text-white'
+            `flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-[13px] font-normal transition-colors ${isCollapsed ? 'justify-center px-0 py-2' : ''
+            } ${isActive
+              ? 'bg-[#27272A] text-white font-medium'
+              : 'text-[#A1A1AA] hover:bg-white/[0.04] hover:text-white'
             }`
           }
           title={isCollapsed ? 'Help' : undefined}
@@ -357,9 +349,8 @@ const CrmSidebar = ({ isNotificationsOpen, onToggleNotifications, onCollapseChan
             setIsCollapsed(nextState);
             if (onCollapseChange) onCollapseChange(nextState);
           }}
-          className={`flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-[13px] font-normal text-[#A1A1AA] hover:bg-white/[0.04] hover:text-white transition-colors cursor-pointer ${
-            isCollapsed ? 'justify-center px-0 py-2' : ''
-          }`}
+          className={`flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-[13px] font-normal text-[#A1A1AA] hover:bg-white/[0.04] hover:text-white transition-colors cursor-pointer ${isCollapsed ? 'justify-center px-0 py-2' : ''
+            }`}
           title={isCollapsed ? 'Expand' : 'Collapse'}
         >
           {isCollapsed ? (
